@@ -223,14 +223,14 @@ function initScannerParticles() {
       if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
       ctx.beginPath();
       ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(0,240,255,${p.a})`;
+      ctx.fillStyle = `rgba(34,211,238,${p.a})`;
       ctx.fill();
       for (let j = i + 1; j < particles.length; j++) {
         const q = particles[j];
         const dx = p.x - q.x, dy = p.y - q.y;
         const dist = Math.hypot(dx, dy);
         if (dist < 100) {
-          ctx.strokeStyle = `rgba(0,240,255,${0.08 * (1 - dist / 100)})`;
+          ctx.strokeStyle = `rgba(34,211,238,${0.08 * (1 - dist / 100)})`;
           ctx.lineWidth = 0.5;
           ctx.beginPath();
           ctx.moveTo(p.x, p.y);
@@ -576,27 +576,12 @@ function initCanvasNetwork() {
       }
       ctx.beginPath();
       ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(37,99,235,.55)';
+      ctx.fillStyle = 'rgba(37,99,235,.45)';
       ctx.fill();
     }
     canvasAnim = requestAnimationFrame(draw);
   }
   draw();
-}
-
-function initParallax() {
-  const hero = document.querySelector('.landing-hero');
-  if (!hero || hero.dataset.parallax) return;
-  hero.dataset.parallax = '1';
-  window.addEventListener('scroll', () => {
-    const y = window.scrollY;
-    const visual = document.querySelector('.hero-visual');
-    const stats = document.querySelector('.hero-stats');
-    const scene = document.querySelector('.hero-3d-scene');
-    if (visual) visual.style.transform = `translateY(${y * 0.06}px)`;
-    if (stats) stats.style.transform = `translateY(${y * 0.03}px)`;
-    if (scene) scene.style.transform = `translateY(${y * 0.02}px)`;
-  }, { passive: true });
 }
 function init3DEffects() {
   const search3d = document.getElementById('search3d');
@@ -653,25 +638,33 @@ function init3DEffects() {
   }
 }
 
+const HERO_FEATURE_PILLS = [
+  { icon: '🔍', label: '1M+ Fuzzing' },
+  { icon: '📡', label: 'Live Threat Stream' },
+  { icon: '🤖', label: 'AI Exploitation' },
+  { icon: '💀', label: '21 Elite Techniques' },
+  { icon: '☁️', label: 'Cloud CSPM' },
+  { icon: '📋', label: '11 Report Standards' },
+];
+
 function renderLanding() {
   document.getElementById('dashLanding').innerHTML = `
     <section class="landing-hero">
-      <div class="hero-3d-scene">
+      <div class="hero-bg">
         <canvas id="heroCanvas" class="hero-canvas"></canvas>
-        <div class="hero-aurora"></div>
-        <div class="hero-scanline"></div>
-        <div class="hero-side-glow left"></div>
-        <div class="hero-side-glow right"></div>
-        <div class="hero-beam"></div><div class="hero-beam"></div><div class="hero-beam"></div>
-        <div class="hero-orbs"><div class="orb orb-1"></div><div class="orb orb-2"></div><div class="orb orb-3"></div></div>
-        <div class="hero-floor"></div>
-        <div class="hero-grid"></div>
-        <div class="particles" id="particles"></div>
+        <div class="hero-glow g1"></div>
+        <div class="hero-glow g2"></div>
+        <div class="hero-glow g3"></div>
+        <div class="hero-grid-bg"></div>
       </div>
       <div class="hero-content">
-        <div class="hero-badge"><span class="dot"></span> 7 security products · 1 unified platform</div>
+        <div class="hero-badge"><span class="dot"></span> 7 security modules · 1 unified platform · Real-time scanning</div>
         <h1>Protect your business with<br/><span class="gradient">enterprise-grade security</span></h1>
-        <p class="hero-sub">Enter your domain below to scan for vulnerabilities, monitor breaches, and secure your entire stack — instantly.</p>
+        <p class="hero-sub">Enter your domain to scan for vulnerabilities, monitor breaches, test APIs, and generate compliance reports — all from one dashboard.</p>
+
+        <div class="hero-features-row">
+          ${HERO_FEATURE_PILLS.map(p => `<span class="hero-feat-pill"><span class="pill-icon">${p.icon}</span>${esc(p.label)}</span>`).join('')}
+        </div>
 
         <div class="hero-search-wrap" id="search3d">
           <div class="search-shell">
@@ -687,10 +680,15 @@ function renderLanding() {
             </div>
           </div>
           <div class="hero-search-hints">
-            <span>150 parallel workers</span><span>·</span>
-            <span>Live threat stream</span><span>·</span>
-            <span>21 elite techniques</span>
+            <span>⚡ 150 parallel workers</span><span>·</span>
+            <span>📡 Live SSE threat feed</span><span>·</span>
+            <span>✅ Exploit verification</span>
           </div>
+        </div>
+
+        <div class="hero-cta">
+          <button class="btn primary lg" onclick="focusDomain()">Start free security check</button>
+          <button class="btn ghost lg" onclick="navPage('scanner')">View live scanner →</button>
         </div>
 
         <div class="hero-stats">
@@ -704,11 +702,11 @@ function renderLanding() {
             <div class="hero-mockup">
               <div class="mockup-bar"><i></i><i></i><i></i></div>
               <div class="mockup-body">
-                <div class="mockup-card" style="--z:20px"><div class="icon">🔍</div><strong>Web Scanner</strong><span>1M+ vulnerability checks · Live SSE stream</span></div>
-                <div class="mockup-card" style="--z:35px"><div class="icon">🌑</div><strong>Dark Web Monitor</strong><span>Breach alerts · Email exposure scan</span></div>
-                <div class="mockup-card" style="--z:25px"><div class="icon">☁️</div><strong>Cloud CSPM</strong><span>AWS · Azure · GCP posture</span></div>
-                <div class="mockup-card mockup-card-wide" style="--z:30px"><div class="icon">🔐</div><strong>API Security</strong><span>OWASP API Top 10 · Auth bypass detection</span></div>
-                <div class="mockup-score"><div class="mockup-ring">87</div><div><strong style="font-size:1rem">Security Score</strong><br/><span style="font-size:.78rem;color:#94a3b8">Grade B+ · 3 critical alerts · 21 techniques active</span></div></div>
+                <div class="mockup-card"><div class="icon">🔍</div><strong>Web Scanner</strong><span>1M+ checks · Live SSE stream</span></div>
+                <div class="mockup-card"><div class="icon">🎣</div><strong>Phishing Sim</strong><span>Campaigns · Awareness scores</span></div>
+                <div class="mockup-card"><div class="icon">🌑</div><strong>Dark Web</strong><span>Breach alerts · Email exposure</span></div>
+                <div class="mockup-card"><div class="icon">☁️</div><strong>Cloud CSPM</strong><span>AWS · Azure · GCP</span></div>
+                <div class="mockup-score"><div class="mockup-ring">87</div><div><strong style="font-size:1rem">Security Score</strong><br/><span style="font-size:.78rem;color:var(--muted)">Grade B+ · 3 critical · 21 techniques active</span></div></div>
               </div>
             </div>
           </div>
@@ -740,9 +738,7 @@ function renderLanding() {
             <h3>${esc(f.title)}</h3>
             <p>${esc(f.desc)}</p>
             <ul class="feat-list">${f.points.map(p => `<li>${esc(p)}</li>`).join('')}</ul>
-            <div style="margin-top:12px;padding:6px 12px;background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.2);border-radius:8px;font-size:.7rem;color:#22c55e;font-weight:700;display:inline-flex;align-items:center;gap:6px">
-              <span style="width:6px;height:6px;border-radius:50%;background:#22c55e;animation:blink 1s infinite"></span> Active & running
-            </div>
+            <div class="feat-status"><span class="live-dot-sm"></span> Active & running</div>
           </div>`).join('')}
         </div>
       </section>
@@ -816,7 +812,7 @@ function renderLanding() {
         </div>
       </section>
     </div>`;
-  setTimeout(() => { initScrollAnimations(); animateCounters(); init3DEffects(); initParticles(); initCanvasNetwork(); initParallax(); }, 100);
+  setTimeout(() => { initScrollAnimations(); animateCounters(); init3DEffects(); initCanvasNetwork(); }, 100);
 }
 
 function initScrollAnimations() {
@@ -944,7 +940,7 @@ async function loadDashboard() {
     resultsEl.innerHTML = `<div class="dash-inner">
       <div class="auto-scan-banner" id="autoScanBanner">
         <div class="spinner"></div>
-        <div><strong>Analysis complete for ${esc(d)}</strong><br/><span>Full security scan starting in 3s…</span></div>
+        <div><strong>✅ Analysis complete for ${esc(d)}</strong><br/><span>Full security scan starting in 3s…</span></div>
       </div>
       <div class="hero-score anim visible">
         <div class="score-circle" style="--sc:${color};border-color:${color}40">
@@ -960,7 +956,7 @@ async function loadDashboard() {
           </div>
         </div>
       </div>
-      <h4 style="margin:24px 0 12px;font-size:.95rem;font-weight:700;color:var(--text)">Your security modules — click to explore</h4>
+      <h4 style="margin:28px 0 14px;font:700 1rem var(--font-display)">Your security modules — click to explore</h4>
       <div class="module-grid">${Object.entries(r.module_scores || {}).map(([k, v]) => {
         const m = MODULE_LABELS[k] || { label: k };
         const locked = (k === 'phishing_awareness' && !planHas('phishing')) || (k === 'darkweb_monitor' && !planHas('darkweb'))
@@ -1419,11 +1415,20 @@ function renderFindings(findings, vids) {
   const el = document.getElementById('findingsList');
   if (!findings?.length) { el.innerHTML = '<div class="scan-empty"><div class="empty-icon">🔎</div><p>No issues found yet.</p></div>'; return; }
   const vset = new Set(vids || []);
-  el.innerHTML = findings.slice(0, 80).map(f => {
+  const crit = findings.filter(f => f.severity === 'critical').length;
+  const high = findings.filter(f => f.severity === 'high').length;
+  el.innerHTML = `
+    <div class="hero-metrics-row" style="max-width:none;margin-bottom:18px">
+      <div class="hero-metric"><b>${findings.length}</b><span>Total</span></div>
+      <div class="hero-metric"><b style="color:#ff6b6b">${crit}</b><span>Critical</span></div>
+      <div class="hero-metric"><b style="color:#fbbf24">${high}</b><span>High</span></div>
+      <div class="hero-metric"><b style="color:#34d399">${vset.size}</b><span>Verified</span></div>
+    </div>
+    ${findings.slice(0, 80).map(f => {
     const v = vset.has(f.id) || f.submission_ready;
     return `<div class="finding ${v ? 'ok' : ''}"><span class="tag ${f.severity === 'critical' ? 'crit' : ''}">${f.severity || 'info'}</span>
-      ${v ? '<span class="tag ok-tag">verified</span>' : ''}<strong>${esc(f.title)}</strong><p class="muted">${esc(f.target)}</p></div>`;
-  }).join('');
+      ${v ? '<span class="tag ok-tag">verified</span>' : ''}<strong>${esc(f.title)}</strong><p class="muted" style="margin-top:4px">${esc(f.target)}</p></div>`;
+  }).join('')}`;
 }
 
 function renderVerified(list) {
@@ -1542,7 +1547,7 @@ async function startMega() {
     navPage('scanner');
     connectThreatStream();
     if (poll) clearInterval(poll);
-    poll = setInterval(pollScan, 250);
+    poll = setInterval(pollScan, 200);
     pollScan();
   } catch (e) { toast(e.message, 'warn'); setScanButtonsDisabled(false); setScanStatus('', 'Ready'); }
 }
@@ -1618,7 +1623,7 @@ async function boot() {
       setScanStatus('running', 'Scanning…');
       navPage('scanner');
       connectThreatStream();
-      poll = setInterval(pollScan, 250);
+      poll = setInterval(pollScan, 200);
       pollScan();
     }
   } catch {}
