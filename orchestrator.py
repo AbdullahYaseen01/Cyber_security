@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 from dataclasses import asdict
 from datetime import datetime, timezone
+from typing import Awaitable, Callable
 
 from core.config import PRIMARY_URLS, VERIFIED_MIN_CONFIDENCE, MEGA_CHECK_TARGET, MEGA_CONCURRENCY
 from core.domain_utils import normalize_domain, scope_root, urls_for_domain
@@ -35,6 +36,10 @@ def _host_matches_target(host: str, target: str) -> bool:
     return host == target
 
 
+class ScanCancelled(Exception):
+    """Raised when the user stops an in-flight scan."""
+
+
 class MegaScanner:
     """Full pipeline scoped to ONE user-selected domain."""
 
@@ -47,7 +52,17 @@ class MegaScanner:
         self.phases: list[str] = []
         self.stats: dict = {}
 
-    async def run(self, scan_id: str, progress_cb=None, threat_feed: ThreatFeed | None = None) -> dict:
+    async def run(
+        self,
+        scan_id: str,
+        progress_cb=None,
+        threat_feed: ThreatFeed | None = None,
+        cancel_check: Callable[[], bool] | None = None,
+        on_mega_created: Callable | None = None,
+    ) -> dict:
+        def cancelled() -> bool:
+            return bool(cancel_check and cancel_check())
+
         started = datetime.now(timezone.utc).isoformat()
         all_findings: list[dict] = []
         all_urls: list[str] = list(self.primary_urls)
@@ -69,6 +84,8 @@ class MegaScanner:
                 await threat_feed.push_finding(f, phase=phase, event_type=event_type)
 
         async def emit(phase: str, pct: int, detail: str = "", **kwargs):
+            if cancelled():
+                raise ScanCancelled()
             self.phases.append(phase) if phase not in self.phases else None
             if threat_feed:
                 await threat_feed.push_phase(phase, detail)
@@ -84,6 +101,8 @@ class MegaScanner:
 
         # Phase 1: Subdomain enumeration (scoped to selected domain)
         await emit("subdomain_discovery", 3, "Enumerating subdomains via DNS + crt.sh…")
+        if cancelled():
+            raise ScanCancelled()
         try:
             subs = await enumerate_subdomains(self.scope_root)
             for s in subs:
@@ -158,6 +177,8 @@ class MegaScanner:
 
         # Phase 6+7: AI exploitation + deep scans + deep attacks + elite exploits IN PARALLEL
         await emit("ai_exploitation", 20, "Parallel: AI exploits · deep scans · OWASP hunter · elite exploits…")
+        if cancelled():
+            raise ScanCancelled()
         exploiter = AIExploiter()
         deep = DeepScannerSuite()
         hunter = DeepAttackHunter()
@@ -177,6 +198,8 @@ class MegaScanner:
         await push_threats(deep_results, "deep_scanning")
         await push_threats(attack_results, "deep_attack_hunt")
         await push_threats(elite_results, "elite_exploits")
+        if cancelled():
+            raise ScanCancelled()
         await emit(
             "elite_exploits", 28,
             f"AI: {exploiter.stats.get('attacks_run', 0)} · Deep: {deep.stats.get('checks_run', 0)} · "
@@ -189,6 +212,8 @@ class MegaScanner:
         await emit("mega_1m_checks", 30, f"Launching {MEGA_CHECK_TARGET:,} parallel checks ({MEGA_CONCURRENCY} workers)…",
                    checks_total=MEGA_CHECK_TARGET, checks_done=0)
         mega = MegaCheckEngine()
+        if on_mega_created:
+            on_mega_created(mega)
         surface = mega_check_surface()
         mega_threat_count = 0
 
@@ -229,10 +254,14 @@ class MegaScanner:
             mega_results = await mega.run(
                 mega_urls, limit=MEGA_CHECK_TARGET,
                 progress_cb=mega_progress, finding_cb=on_mega_hit,
+                cancel_check=cancel_check,
             )
         except Exception as e:
             await emit("mega_1m_checks", 80, f"Fuzz engine recovered from error: {e}",
                        checks_done=mega.checks_run, checks_total=MEGA_CHECK_TARGET, fuzz_pct=100)
+
+        if cancelled():
+            raise ScanCancelled()
 
         # Phase 9: Nuclei templates (quick pass on top URLs)
         await emit("nuclei_checks", 82, "Running nuclei templates…", findings_count=len(all_findings), fuzz_pct=100)

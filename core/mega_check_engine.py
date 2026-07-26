@@ -186,6 +186,18 @@ class MegaCheckEngine:
         self.check_target = MEGA_CHECK_TARGET
         self.checks_by_type: dict[str, int] = {}
         self._stop = False
+        self._cancel_check = None
+
+    def request_stop(self):
+        self._stop = True
+
+    def _is_cancelled(self) -> bool:
+        if self._stop:
+            return True
+        if self._cancel_check and self._cancel_check():
+            self._stop = True
+            return True
+        return False
 
     @property
     def check_surface(self) -> int:
@@ -197,6 +209,7 @@ class MegaCheckEngine:
         limit: int = MEGA_CHECK_TARGET,
         progress_cb: Callable[[int, int, dict], Awaitable[None]] | None = None,
         finding_cb: Callable[[dict], Awaitable[None]] | None = None,
+        cancel_check: Callable[[], bool] | None = None,
     ) -> list[dict]:
         self.results = []
         self.checks_run = 0
@@ -205,6 +218,7 @@ class MegaCheckEngine:
         self.check_target = limit
         self.checks_by_type = {}
         self._stop = False
+        self._cancel_check = cancel_check
 
         queue: asyncio.Queue[MegaCheck | None] = asyncio.Queue(maxsize=MEGA_QUEUE_SIZE)
         results_lock = asyncio.Lock()
@@ -213,7 +227,7 @@ class MegaCheckEngine:
         async def producer():
             try:
                 for check in iter_mega_checks(base_urls, limit):
-                    if self._stop:
+                    if self._is_cancelled():
                         break
                     await queue.put(check)
             except Exception:
@@ -224,9 +238,13 @@ class MegaCheckEngine:
 
         async def worker(client: httpx.AsyncClient):
             while True:
+                if self._is_cancelled():
+                    return
                 check = await queue.get()
                 try:
                     if check is None:
+                        return
+                    if self._is_cancelled():
                         return
                     hit = await self._execute(client, check)
                     self.checks_run += 1
@@ -250,7 +268,7 @@ class MegaCheckEngine:
         async def progress_ticker():
             """Push progress every MEGA_PROGRESS_INTERVAL so UI never freezes."""
             last = -1
-            while not self._stop and self.checks_run < limit:
+            while not self._is_cancelled() and self.checks_run < limit:
                 await asyncio.sleep(MEGA_PROGRESS_INTERVAL)
                 if progress_cb and self.checks_run != last:
                     last = self.checks_run
@@ -293,10 +311,13 @@ class MegaCheckEngine:
             workers = [asyncio.create_task(worker(client)) for _ in range(MEGA_CONCURRENCY)]
             try:
                 await asyncio.gather(prod, *workers)
+            except asyncio.CancelledError:
+                self.request_stop()
+                raise
             except Exception:
-                self._stop = True
+                self.request_stop()
             finally:
-                self._stop = True
+                self.request_stop()
                 ticker.cancel()
                 try:
                     await ticker

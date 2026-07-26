@@ -1,6 +1,6 @@
 # QuantumShield
 
-CyberShield security scanner — a localhost web application for **good-faith vulnerability discovery**, with a premium real-time scanner dashboard, live threat feed, and multi-phase scan pipeline.
+QuantumShield is an all-in-one security platform for **good-faith vulnerability discovery**, with a real-time scanner dashboard, live threat feed, and multi-phase scan pipeline.
 
 > Formerly developed as the NASA VDP Security Scanner; aligned with [NASA Vulnerability Disclosure Policy v1.6.2](https://www.nasa.gov/vulnerability-disclosure-policy/) for in-scope targets.
 

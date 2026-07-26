@@ -1,4 +1,4 @@
-/* CyberShield Platform — friendly unified client */
+/* QuantumShield Platform — unified security client */
 let scanId = null, poll = null, eventSource = null, seenThreatIds = new Set();
 let currentStandard = 'iso27001', currentReportContent = '', reportStandards = [];
 let securityTab = 'phishing', annualBilling = false;
@@ -80,8 +80,8 @@ const PLATFORM_FEATURES = [
 ];
 
 const REVIEWS = [
-  { stars:5, text:'CyberShield found 3 critical vulnerabilities we missed for months. The live threat feed during scanning is incredible — we fixed everything before our audit.', name:'Sarah Chen', role:'CTO, TechFlow Inc.', initials:'SC' },
-  { stars:5, text:'We switched from 4 separate security tools to CyberShield. One domain input, one dashboard, everything in one place. Saved us $2,000/month.', name:'Marcus Johnson', role:'IT Director, RetailMax', initials:'MJ' },
+  { stars:5, text:'QuantumShield found 3 critical vulnerabilities we missed for months. The live threat feed during scanning is incredible — we fixed everything before our audit.', name:'Sarah Chen', role:'CTO, TechFlow Inc.', initials:'SC' },
+  { stars:5, text:'We switched from 4 separate security tools to QuantumShield. One domain input, one dashboard, everything in one place. Saved us $2,000/month.', name:'Marcus Johnson', role:'IT Director, RetailMax', initials:'MJ' },
   { stars:5, text:'The phishing simulation alone paid for itself. Our click rate dropped from 34% to 8% in two months. Employees actually thank us for the training now.', name:'Elena Rodriguez', role:'CISO, HealthBridge', initials:'ER' },
   { stars:5, text:'Compliance reports generated automatically after each scan — ISO 27001 and SOC 2 ready. Our auditors were impressed with the detail and formatting.', name:'James Park', role:'Compliance Lead, FinSecure', initials:'JP' },
   { stars:5, text:'Dark web monitoring caught our CEO\'s email in a breach within hours. We reset passwords before any damage. This platform is essential.', name:'Aisha Patel', role:'Security Manager, CloudNine', initials:'AP' },
@@ -158,8 +158,16 @@ const SCAN_ENGINES = [
 function esc(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
 function fmtN(n) { return typeof n === 'number' ? n.toLocaleString() : (n || '—'); }
 
-function getPlan() { return localStorage.getItem('cybershield_plan') || 'starter'; }
-function setPlan(id) { localStorage.setItem('cybershield_plan', id); updatePlanUI(); toast('You\'re now on the ' + PLANS[id].name + ' plan!', 'ok'); }
+function getPlan() {
+  return localStorage.getItem('quantumshield_plan')
+    || localStorage.getItem('cybershield_plan')
+    || 'starter';
+}
+function setPlan(id) {
+  localStorage.setItem('quantumshield_plan', id);
+  updatePlanUI();
+  toast('You\'re now on the ' + PLANS[id].name + ' plan!', 'ok');
+}
 
 function planHas(feature) {
   const p = PLANS[getPlan()];
@@ -344,7 +352,17 @@ function setScanType(v) {
 }
 
 function syncDomainAndAnalyze() {
-  syncDomains(document.getElementById('pageDomainInput')?.value);
+  const header = document.getElementById('scannerHeaderDomain');
+  const page = document.getElementById('pageDomainInput');
+  const hero = document.getElementById('heroDomain');
+  const src = (document.body.classList.contains('scanner-active') && header?.value)
+    ? header.value
+    : (hero?.value || page?.value || header?.value || '');
+  syncDomains(src);
+  if (document.body.classList.contains('scanner-active')) {
+    startMega();
+    return;
+  }
   analyzeAll();
 }
 
@@ -776,7 +794,7 @@ function renderLanding() {
         <div class="section-head">
           <div class="section-tag">Customer love</div>
           <h2>Trusted by security teams worldwide</h2>
-          <p>See why thousands of companies rely on CyberShield every day.</p>
+          <p>See why thousands of companies rely on QuantumShield every day.</p>
         </div>
         <div class="reviews-grid">${REVIEWS.map((r, i) => `
           <div class="review-card anim delay-${(i % 3) + 1}">
@@ -793,7 +811,7 @@ function renderLanding() {
       <section class="section anim">
         <div class="cta-band">
           <h2>Ready to secure your website?</h2>
-          <p>Join 12,000+ businesses protecting their digital assets with CyberShield.</p>
+          <p>Join 12,000+ businesses protecting their digital assets with QuantumShield.</p>
           <button class="btn lg" style="background:#fff;color:var(--accent)" onclick="focusDomain()">Start your free check →</button>
         </div>
       </section>
@@ -1209,8 +1227,14 @@ function applyScanState(s) {
     document.getElementById('phaseDetail').textContent = s.phase_detail || '';
   }
   if (s.current_phase) updatePipeline(s.current_phase);
-  if (s.status === 'running') {
+  if (s.status === 'running' || s.status === 'queued') {
+    setScanButtonsDisabled(true);
     setScanStatus('running', s.phase_label || s.current_phase || 'Scanning…');
+  } else if (s.status === 'cancelled') {
+    setScanButtonsDisabled(false);
+    setScanStatus('', 'Stopped');
+    document.getElementById('phaseLabel').textContent = 'Scan stopped';
+    document.getElementById('phaseDetail').textContent = s.phase_detail || 'You stopped this scan.';
   }
   document.getElementById('scanChecks').textContent = s.checks_done ? fmtN(s.checks_done) : '—';
   const speedTxt = s.checks_per_sec ? fmtN(s.checks_per_sec) + '/s' : '—';
@@ -1361,6 +1385,7 @@ async function pollScan(force) {
 
     if (s.status === 'completed') {
       clearInterval(poll); poll = null; disconnectThreatStream();
+      rememberScanId(null);
       setScanButtonsDisabled(false);
       setScanStatus('done', 'Complete');
       setStatus('Scan complete!');
@@ -1378,9 +1403,14 @@ async function pollScan(force) {
       toast('Scan failed — please try again', 'warn');
     } else if (s.status === 'cancelled') {
       clearInterval(poll); poll = null; disconnectThreatStream();
+      rememberScanId(null);
       setScanButtonsDisabled(false);
       setScanStatus('', 'Stopped');
       setStatus('Scan stopped');
+      document.getElementById('phaseLabel').textContent = 'Scan stopped';
+      document.getElementById('phaseDetail').textContent = s.phase_detail || 'You stopped this scan.';
+    } else if (s.status === 'running' || s.status === 'queued') {
+      setScanButtonsDisabled(true);
     }
   } catch {} finally { pollInflight = false; }
 }
@@ -1411,31 +1441,79 @@ function renderSubmit(reports) {
     <button class="btn sm ghost" onclick="navigator.clipboard.writeText(this.previousElementSibling.textContent);toast('Copied!','ok')">Copy report</button></div>`).join('');
 }
 
+function rememberScanId(id) {
+  scanId = id;
+  if (id) sessionStorage.setItem('qs_scan_id', id);
+  else sessionStorage.removeItem('qs_scan_id');
+}
+
+async function resolveActiveScanId() {
+  const tryId = async (id) => {
+    if (!id) return null;
+    try {
+      const d = await (await fetch(`/api/scan/${encodeURIComponent(id)}`)).json();
+      if (d.error) return null;
+      if (['running', 'queued'].includes(d.status)) {
+        rememberScanId(id);
+        return id;
+      }
+    } catch {}
+    return null;
+  };
+
+  let id = await tryId(scanId);
+  if (id) return id;
+
+  id = await tryId(sessionStorage.getItem('qs_scan_id'));
+  if (id) return id;
+
+  try {
+    const latest = await (await fetch('/api/scan/latest')).json();
+    id = await tryId(latest.scan_id);
+    if (id) return id;
+  } catch {}
+
+  return null;
+}
+
 async function stopScan() {
-  if (!scanId) return;
+  const id = await resolveActiveScanId();
+  if (!id) {
+    toast('No active scan to stop', 'warn');
+    setScanButtonsDisabled(false);
+    return;
+  }
   const fcpStop = document.getElementById('fcpStopBtn');
   const heroStop = document.getElementById('scanStopBtn');
-  if (fcpStop) fcpStop.disabled = true;
-  if (heroStop) heroStop.disabled = true;
+  const stopLabel = '■ Stop Scan';
+  if (fcpStop) { fcpStop.disabled = true; fcpStop.textContent = 'Stopping…'; }
+  if (heroStop) { heroStop.disabled = true; heroStop.textContent = 'Stopping…'; }
+  setScanStatus('running', 'Stopping…');
+  setStatus('Stopping scan…');
   try {
-    const r = await fetch(`/api/scan/${scanId}/stop`, { method: 'POST' });
+    let r = await fetch(`/api/scan/stop?scan_id=${encodeURIComponent(id)}`, { method: 'POST' });
+    if (r.status === 404) {
+      r = await fetch(`/api/scan/${encodeURIComponent(id)}/stop`, { method: 'POST' });
+    }
     const d = await r.json();
-    if (!r.ok) {
-      toast(d.detail || d.message || d.error || 'Could not stop scan', 'warn');
+    if (!r.ok || d.ok === false) {
+      toast(d.message || d.detail || d.error || 'Could not stop scan', 'warn');
+      if (id) setScanButtonsDisabled(true);
       return;
     }
-    toast('Scan stopped', 'ok');
     clearInterval(poll); poll = null;
     disconnectThreatStream();
+    rememberScanId(null);
+    applyScanState(d);
     setScanButtonsDisabled(false);
-    setScanStatus('', 'Stopped');
     setStatus('Scan stopped');
-    pollScan(true);
+    toast(d.message || 'Scan stopped', 'ok');
   } catch (e) {
     toast(e.message, 'warn');
+    if (id) setScanButtonsDisabled(true);
   } finally {
-    if (fcpStop) fcpStop.disabled = false;
-    if (heroStop) heroStop.disabled = false;
+    if (fcpStop) { fcpStop.disabled = false; fcpStop.textContent = stopLabel; }
+    if (heroStop) { heroStop.disabled = false; heroStop.textContent = stopLabel; }
   }
 }
 
@@ -1460,6 +1538,7 @@ async function startMega() {
     const d = await r.json();
     if (!r.ok) { toast(d.detail || 'Could not start scan', 'warn'); setScanButtonsDisabled(false); setScanStatus('', 'Ready'); return; }
     scanId = d.scan_id;
+    rememberScanId(scanId);
     navPage('scanner');
     connectThreatStream();
     if (poll) clearInterval(poll);
@@ -1533,8 +1612,8 @@ async function boot() {
   try {
     const b = await (await fetch('/api/boot')).json();
     document.getElementById('verPill').textContent = 'v' + (b.version || '7');
-    if (b.scan?.status === 'running') {
-      scanId = b.latest_scan_id;
+    if (b.scan?.status === 'running' || b.scan?.status === 'queued') {
+      rememberScanId(b.latest_scan_id || b.scan?.scan_id);
       setScanButtonsDisabled(true);
       setScanStatus('running', 'Scanning…');
       navPage('scanner');

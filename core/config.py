@@ -36,7 +36,7 @@ CRAWL_MAX_DEPTH = 2
 SUBDOMAIN_MAX = 30
 HTTP_TIMEOUT = 8.0
 
-USER_AGENT = "CyberScan-Pro/6.0 (Authorized Security Research)"
+USER_AGENT = "QuantumShield/7.1 (Authorized Security Research)"
 
 # Mega parallel engine — continuous workers (not batch-gather)
 MEGA_CHECK_TARGET = 1_000_000
@@ -52,5 +52,5 @@ MEGA_QUEUE_SIZE = 2000
 VERIFIED_MIN_CONFIDENCE = 75
 
 # Product branding
-PRODUCT_NAME = "CyberShield Platform"
-PRODUCT_VERSION = "7.0.0"
+PRODUCT_NAME = "QuantumShield"
+PRODUCT_VERSION = "7.1.0"

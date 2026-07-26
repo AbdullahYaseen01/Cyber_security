@@ -1,4 +1,4 @@
-"""CyberScan Pro — universal SaaS mega scanner API."""
+"""QuantumShield — universal SaaS mega scanner API."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from fastapi import FastAPI, Query, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from orchestrator import MegaScanner
+from orchestrator import MegaScanner, ScanCancelled
 from super_scanner import SuperScanner
 from exploit import ExploitEngine
 from intelligence import train_model, get_model_dict
@@ -20,23 +20,89 @@ from core.config import (
     MEGA_CONCURRENCY, UNIVERSAL_MODE, PRODUCT_NAME, PRODUCT_VERSION,
 )
 from core.domain_utils import is_in_scope, normalize_domain
-from core.mega_check_engine import mega_check_surface
+from core.mega_check_engine import mega_check_surface, MegaCheckEngine
 from core.scan_history import save_scan_summary, list_history
 from core.compliance_reports import (
     list_standards, generate_report, generate_all_reports, save_reports, REPORT_STANDARDS,
 )
 from core.threat_stream import ThreatFeed
+from core.scan_registry import upsert_scan, get_scan as registry_get_scan, find_active_scan_id, load_registry
 from core.security_platform import SecurityPlatform
 
 scans: dict[str, dict] = {}
 threat_feeds: dict[str, ThreatFeed] = {}
 scan_tasks: dict[str, asyncio.Task] = {}
-platform = SecurityPlatform()
+active_mega_engines: dict[str, MegaCheckEngine] = {}
 latest_scan_id: str | None = None
 
 
+def _hydrate_scans_from_registry() -> None:
+    global latest_scan_id
+    for sid, entry in load_registry().items():
+        if sid not in scans:
+            scans[sid] = dict(entry)
+        if entry.get("status") in ("running", "queued") and not latest_scan_id:
+            latest_scan_id = sid
+
+
+def _touch_scan(scan_id: str, **fields) -> None:
+    if scan_id not in scans:
+        scans[scan_id] = {"scan_id": scan_id}
+    scans[scan_id].update(fields)
+    upsert_scan(scan_id, scans[scan_id])
+
+
+def _ensure_scan_loaded(scan_id: str) -> bool:
+    if scan_id in scans:
+        return True
+    entry = registry_get_scan(scan_id)
+    if not entry:
+        return False
+    scans[scan_id] = entry
+    return True
+
+
+def _stop_scan_impl(scan_id: str) -> dict | JSONResponse:
+    if not _ensure_scan_loaded(scan_id):
+        return JSONResponse({"ok": False, "error": "not found", "message": "Scan not found"}, status_code=404)
+
+    status = scans[scan_id].get("status")
+    if status in ("completed", "failed", "cancelled"):
+        resp = _scan_response(scan_id)
+        resp["ok"] = True
+        resp["message"] = f"Scan already {status}"
+        return resp
+
+    if status not in ("running", "queued"):
+        return JSONResponse({"ok": False, "message": f"Scan is {status}, not running"}, status_code=400)
+
+    scans[scan_id]["status"] = "cancelled"
+    scans[scan_id]["phase_label"] = "Stopped"
+    scans[scan_id]["phase_detail"] = "Scan stopped by user"
+    scans[scan_id]["current_phase"] = "stopped"
+    _touch_scan(scan_id)
+
+    engine = active_mega_engines.get(scan_id)
+    if engine:
+        engine.request_stop()
+    task = scan_tasks.get(scan_id)
+    if task and not task.done():
+        task.cancel()
+
+    resp = _scan_response(scan_id)
+    resp["ok"] = True
+    return resp
+
+
+platform = SecurityPlatform()
+
+
 async def _run_scan(scan_id: str, scan_type: str = "mega", target_domain: str = "nasa.gov"):
+    if scans[scan_id].get("status") == "cancelled":
+        return
+
     scans[scan_id]["status"] = "running"
+    _touch_scan(scan_id, status="running")
     scans[scan_id]["target_domain"] = normalize_domain(target_domain)
     scans[scan_id]["overall_pct"] = 0
     scans[scan_id]["fuzz_pct"] = 0
@@ -45,7 +111,13 @@ async def _run_scan(scan_id: str, scan_type: str = "mega", target_domain: str = 
     scans[scan_id]["threat_summary"] = {}
     scans[scan_id]["live_threats"] = []
 
+    def is_cancelled() -> bool:
+        return scans[scan_id].get("status") == "cancelled"
+
     async def progress_cb(update: dict):
+        if is_cancelled():
+            return
+
         scans[scan_id].update(update)
         prog = update.get("overall_pct", update.get("progress"))
         if prog is not None:
@@ -63,8 +135,22 @@ async def _run_scan(scan_id: str, scan_type: str = "mega", target_domain: str = 
     try:
         if scan_type == "mega":
             scanner = MegaScanner(target_domain)
-            result = await scanner.run(scan_id, progress_cb=progress_cb, threat_feed=feed)
-            if scans[scan_id].get("status") == "cancelled":
+
+            def on_mega_created(engine: MegaCheckEngine):
+                active_mega_engines[scan_id] = engine
+
+            try:
+                result = await scanner.run(
+                    scan_id,
+                    progress_cb=progress_cb,
+                    threat_feed=feed,
+                    cancel_check=is_cancelled,
+                    on_mega_created=on_mega_created,
+                )
+            except ScanCancelled:
+                _touch_scan(scan_id)
+                return
+            if is_cancelled():
                 return
         else:
             async with SuperScanner(request_delay=0.05) as s:
@@ -85,6 +171,9 @@ async def _run_scan(scan_id: str, scan_type: str = "mega", target_domain: str = 
             result.setdefault("summary", {})
             result["summary"]["verified_exploitable"] = len(result["verified_findings"])
             result["summary"]["submittable"] = len(result["submittable_reports"])
+
+        if is_cancelled():
+            return
 
         scans[scan_id].update({
             "status": "completed",
@@ -111,10 +200,13 @@ async def _run_scan(scan_id: str, scan_type: str = "mega", target_domain: str = 
             save_scan_summary(scan_id, {**scans[scan_id], **result})
         except Exception:
             pass
+        _touch_scan(scan_id)
     except asyncio.CancelledError:
         scans[scan_id]["status"] = "cancelled"
         scans[scan_id]["phase_label"] = "Stopped"
         scans[scan_id]["phase_detail"] = "Scan stopped by user"
+        scans[scan_id]["current_phase"] = "stopped"
+        _touch_scan(scan_id)
         try:
             save_scan_summary(scan_id, scans[scan_id])
         except Exception:
@@ -126,10 +218,13 @@ async def _run_scan(scan_id: str, scan_type: str = "mega", target_domain: str = 
         scans[scan_id]["error"] = str(e)
         scans[scan_id]["traceback"] = traceback.format_exc()
         scans[scan_id]["phase_detail"] = f"Scan failed: {e}"
+        _touch_scan(scan_id)
         try:
             save_scan_summary(scan_id, scans[scan_id])
         except Exception:
             pass
+    finally:
+        active_mega_engines.pop(scan_id, None)
 
 
 def _queue_scan(scan_type: str = "mega", target_domain: str = "nasa.gov") -> str:
@@ -155,6 +250,7 @@ def _queue_scan(scan_type: str = "mega", target_domain: str = "nasa.gov") -> str
         "workers": MEGA_CONCURRENCY,
         "checks_total": MEGA_CHECK_TARGET if scan_type == "mega" else 0,
     }
+    upsert_scan(scan_id, scans[scan_id])
     task = asyncio.create_task(_run_scan(scan_id, scan_type, domain))
     scan_tasks[scan_id] = task
     task.add_done_callback(lambda t: scan_tasks.pop(scan_id, None))
@@ -163,6 +259,7 @@ def _queue_scan(scan_type: str = "mega", target_domain: str = "nasa.gov") -> str
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    _hydrate_scans_from_registry()
     try:
         train_model()
     except Exception:
@@ -248,6 +345,17 @@ async def start_scan(
     }
 
 
+@app.post("/api/scan/stop")
+async def stop_active_scan(scan_id: str | None = Query(None, description="Scan ID; defaults to latest active scan")):
+    sid = scan_id or latest_scan_id or find_active_scan_id()
+    if not sid:
+        return JSONResponse({"ok": False, "error": "not found", "message": "No active scan"}, status_code=404)
+    result = _stop_scan_impl(sid)
+    if isinstance(result, JSONResponse):
+        return result
+    return result
+
+
 @app.get("/api/scan/latest")
 async def latest():
     if not latest_scan_id:
@@ -257,25 +365,17 @@ async def latest():
 
 @app.get("/api/scan/{scan_id}")
 async def get_scan(scan_id: str):
-    if scan_id not in scans:
+    if not _ensure_scan_loaded(scan_id):
         return JSONResponse({"error": "not found"}, status_code=404)
     return _scan_response(scan_id)
 
 
 @app.post("/api/scan/{scan_id}/stop")
 async def stop_scan(scan_id: str):
-    if scan_id not in scans:
-        return JSONResponse({"error": "not found"}, status_code=404)
-    status = scans[scan_id].get("status")
-    if status not in ("running", "queued"):
-        return JSONResponse({"ok": False, "message": f"Scan is {status}, not running"}, status_code=400)
-    scans[scan_id]["status"] = "cancelled"
-    scans[scan_id]["phase_label"] = "Stopped"
-    scans[scan_id]["phase_detail"] = "Scan stopped by user"
-    task = scan_tasks.pop(scan_id, None)
-    if task and not task.done():
-        task.cancel()
-    return {"ok": True, "scan_id": scan_id, "status": "cancelled"}
+    result = _stop_scan_impl(scan_id)
+    if isinstance(result, JSONResponse):
+        return result
+    return result
 
 
 def _scan_response(scan_id: str) -> dict:

@@ -19,6 +19,7 @@ data/history/
 data/reports/
 data/sources/
 data/platform/
+data/scan_registry.json
 
 # IDE
 .idea/
