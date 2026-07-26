@@ -17,7 +17,7 @@ from exploit import ExploitEngine
 from intelligence import train_model, get_model_dict
 from core.config import (
     SCOPE_DOMAINS, VERIFIED_MIN_CONFIDENCE, MEGA_CHECK_TARGET,
-    MEGA_CONCURRENCY, UNIVERSAL_MODE, PRODUCT_NAME, PRODUCT_VERSION,
+    MEGA_CONCURRENCY, UNIVERSAL_MODE, PRODUCT_NAME, PRODUCT_VERSION, ROOT,
 )
 from core.domain_utils import is_in_scope, normalize_domain
 from core.mega_check_engine import mega_check_surface, MegaCheckEngine
@@ -272,7 +272,7 @@ app = FastAPI(title=PRODUCT_NAME, version=PRODUCT_VERSION, lifespan=lifespan)
 
 @app.get("/", response_class=HTMLResponse)
 async def index():
-    with open("static/index.html") as f:
+    with open(ROOT / "static" / "index.html", encoding="utf-8") as f:
         return HTMLResponse(f.read())
 
 
@@ -640,4 +640,4 @@ async def alert_channels():
     return {"channels": platform.alert_channels()}
 
 
-app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/static", StaticFiles(directory=str(ROOT / "static")), name="static")

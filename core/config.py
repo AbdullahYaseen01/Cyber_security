@@ -1,9 +1,15 @@
 """VDP / SaaS platform configuration."""
 
+import os
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-DATA_DIR = ROOT / "data"
+
+# Vercel serverless: only /tmp is writable
+if os.environ.get("VERCEL"):
+    DATA_DIR = Path("/tmp/quantumshield/data")
+else:
+    DATA_DIR = ROOT / "data"
 SOURCES_DIR = DATA_DIR / "sources"
 REPORTS_DIR = DATA_DIR / "reports"
 HISTORY_DIR = DATA_DIR / "history"
