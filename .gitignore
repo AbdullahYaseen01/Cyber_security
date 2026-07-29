@@ -10,6 +10,8 @@ build/
 # Environment
 .env
 .env.*
+!.env.example
+!web/.env.example
 
 # OS
 .DS_Store
@@ -25,3 +27,10 @@ data/scan_registry.json
 .idea/
 .vscode/
 *.swp
+.vercel
+
+# Next.js
+web/node_modules/
+web/.next/
+web/.env
+web/.env.local

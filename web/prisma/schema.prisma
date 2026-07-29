@@ -1,0 +1,175 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  OWNER
+  ADMIN
+  ANALYST
+  VIEWER
+}
+
+enum SubscriptionTier {
+  STARTER
+  PROFESSIONAL
+  BUSINESS
+  ENTERPRISE
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  TRIALING
+  PAST_DUE
+  CANCELED
+  INCOMPLETE
+}
+
+enum DomainVerificationStatus {
+  PENDING
+  VERIFIED
+  FAILED
+}
+
+enum ScanMode {
+  LIGHTNING
+  STANDARD
+  MEGA
+  SUPER
+}
+
+enum ScanStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  passwordHash  String?
+  name          String?
+  avatarUrl     String?
+  emailVerified DateTime?
+  totpSecret    String?
+  totpEnabled   Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  memberships   OrgMember[]
+  auditLogs     AuditLog[]
+  sessions      Session[]
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  userId       String
+  refreshToken String   @unique
+  userAgent    String?
+  ipAddress    String?
+  expiresAt    DateTime
+  revokedAt    DateTime?
+  createdAt    DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Organization {
+  id                   String             @id @default(cuid())
+  name                 String
+  slug                 String             @unique
+  stripeCustomerId     String?            @unique
+  stripeSubscriptionId String?            @unique
+  subscriptionTier     SubscriptionTier   @default(STARTER)
+  subscriptionStatus   SubscriptionStatus @default(INCOMPLETE)
+  trialEndsAt          DateTime?
+  scansUsedThisMonth   Int                @default(0)
+  scansLimit           Int                @default(10)
+  domainLimit          Int                @default(1)
+  billingCycle         String             @default("annual")
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  members   OrgMember[]
+  domains   Domain[]
+  scans     Scan[]
+  auditLogs AuditLog[]
+}
+
+model OrgMember {
+  id        String   @id @default(cuid())
+  orgId     String
+  userId    String
+  role      UserRole @default(VIEWER)
+  createdAt DateTime @default(now())
+
+  org  Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  user User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([orgId, userId])
+  @@index([userId])
+}
+
+model Domain {
+  id                 String                   @id @default(cuid())
+  orgId              String
+  domain             String
+  verificationToken  String                   @default(cuid())
+  verificationStatus DomainVerificationStatus @default(PENDING)
+  verifiedAt         DateTime?
+  createdAt          DateTime                 @default(now())
+
+  org   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  scans Scan[]
+
+  @@unique([orgId, domain])
+  @@index([orgId])
+}
+
+model Scan {
+  id              String     @id @default(cuid())
+  orgId           String
+  domainId        String?
+  externalScanId  String?
+  targetDomain    String
+  mode            ScanMode   @default(LIGHTNING)
+  status          ScanStatus @default(QUEUED)
+  progress        Int        @default(0)
+  fuzzProgress    Int        @default(0)
+  findingsCount   Int        @default(0)
+  criticalCount   Int        @default(0)
+  phaseLabel      String?
+  startedAt       DateTime   @default(now())
+  completedAt     DateTime?
+  metadata        Json?
+
+  org    Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  domain Domain?      @relation(fields: [domainId], references: [id])
+
+  @@index([orgId])
+  @@index([externalScanId])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  orgId     String?
+  userId    String?
+  action    String
+  details   Json?
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  org  Organization? @relation(fields: [orgId], references: [id], onDelete: SetNull)
+  user User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([orgId])
+  @@index([userId])
+}

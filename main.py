@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import asyncio
+import os
 import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
 from fastapi import FastAPI, Query, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -28,6 +30,8 @@ from core.compliance_reports import (
 from core.threat_stream import ThreatFeed
 from core.scan_registry import upsert_scan, get_scan as registry_get_scan, find_active_scan_id, load_registry
 from core.security_platform import SecurityPlatform
+
+from qs_platform.routes import router as platform_router
 
 scans: dict[str, dict] = {}
 threat_feeds: dict[str, ThreatFeed] = {}
@@ -268,6 +272,20 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title=PRODUCT_NAME, version=PRODUCT_VERSION, lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        os.environ.get("FRONTEND_URL", "http://localhost:3000"),
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.include_router(platform_router)
 
 
 @app.get("/", response_class=HTMLResponse)

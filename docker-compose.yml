@@ -1,0 +1,60 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: quantumshield
+      POSTGRES_PASSWORD: quantumshield
+      POSTGRES_DB: quantumshield
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U quantumshield"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  scanner:
+    build:
+      context: .
+      dockerfile: Dockerfile.scanner
+    ports:
+      - "8080:8080"
+    environment:
+      - UNIVERSAL_MODE=true
+      - FRONTEND_URL=http://localhost:3000
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      redis:
+        condition: service_started
+
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgresql://quantumshield:quantumshield@postgres:5432/quantumshield
+      - SCANNER_API_URL=http://scanner:8080
+      - NEXT_PUBLIC_APP_URL=http://localhost:3000
+      - JWT_ACCESS_SECRET=change-me-in-production-access
+      - JWT_REFRESH_SECRET=change-me-in-production-refresh
+    depends_on:
+      postgres:
+        condition: service_healthy
+      scanner:
+        condition: service_started
+
+volumes:
+  postgres_data:
+  redis_data:
