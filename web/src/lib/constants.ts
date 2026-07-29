@@ -62,4 +62,7 @@ export const COLORS = {
   purple: "#7C3AED",
 };
 
-export const SCANNER_API_URL = process.env.SCANNER_API_URL ?? "http://127.0.0.1:8080";
+export const SCANNER_API_URL =
+  process.env.NEXT_PUBLIC_SCANNER_API_URL ??
+  process.env.SCANNER_API_URL ??
+  "http://127.0.0.1:8080";
