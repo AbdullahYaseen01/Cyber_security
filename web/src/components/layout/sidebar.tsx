@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { ChevronLeft, ChevronRight, Shield } from "lucide-react";
 import { NAV_ITEMS } from "@/lib/constants";
 import { canAccessModule } from "@/lib/tiers";
+import { isDemoUser } from "@/lib/demo-auth";
 import { useUIStore } from "@/store";
 import { useAuthStore } from "@/store";
 import { cn } from "@/lib/utils";
@@ -16,6 +17,7 @@ export function Sidebar() {
   const { sidebarCollapsed, toggleSidebar } = useUIStore();
   const user = useAuthStore((s) => s.user);
   const tier = user?.tier ?? "STARTER";
+  const isDemo = isDemoUser(user);
 
   return (
     <motion.aside
@@ -37,7 +39,7 @@ export function Sidebar() {
 
       <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-0.5">
         {NAV_ITEMS.map((item) => {
-          const locked = !canAccessModule(tier, item.id);
+          const locked = !canAccessModule(tier, item.id, { isDemo });
           const active = pathname.startsWith(item.href);
           const Icon = item.icon;
 
