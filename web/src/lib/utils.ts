@@ -11,6 +11,16 @@ export function formatNumber(n: number): string {
   return n.toString();
 }
 
+export function slugify(name: string): string {
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .slice(0, 50);
+}
+
 export function formatDuration(seconds: number): string {
   if (seconds < 60) return `${seconds}s`;
   const m = Math.floor(seconds / 60);

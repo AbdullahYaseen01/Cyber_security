@@ -11,8 +11,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const sidebarCollapsed = useUIStore((s) => s.sidebarCollapsed);
 
   return (
-    <div className="min-h-screen bg-navy-950 text-white">
-      <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-cyan-950/20 via-navy-950 to-navy-950 pointer-events-none" />
+    <div className="min-h-screen bg-[#0B0F19] text-white">
+      <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-cyan-950/20 via-[#0B0F19] to-[#0B0F19] pointer-events-none" />
       <Sidebar />
       <div
         className={cn(
@@ -32,7 +32,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const setUser = useAuthStore((s) => s.setUser);
 
   useEffect(() => {
-    fetch("/api/auth/me")
+    fetch("/api/auth/session")
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (data?.user) setUser(data.user);

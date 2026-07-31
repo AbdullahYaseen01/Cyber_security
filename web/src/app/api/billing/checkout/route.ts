@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { requireSession } from "@/lib/auth";
+import { auth } from "@/lib/auth";
 import { stripe, getStripePriceId } from "@/lib/stripe";
 import type { TierId } from "@/lib/tiers";
 import { prisma } from "@/lib/db";
@@ -12,30 +12,33 @@ const checkoutSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await requireSession();
+    const session = await auth();
+    if (!session?.user?.id || !session.user.orgId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const body = await req.json();
     const { tier, cycle } = checkoutSchema.parse(body);
 
     if (!stripe) {
-      return NextResponse.json({
-        error: "Stripe not configured",
-        message: "Set STRIPE_SECRET_KEY in environment",
-      }, { status: 503 });
+      return NextResponse.json({ error: "Stripe not configured" }, { status: 503 });
     }
 
-    const org = await prisma.organization.findUniqueOrThrow({ where: { id: session.orgId } });
-    const user = await prisma.user.findUniqueOrThrow({ where: { id: session.sub } });
+    const org = await prisma.organization.findUniqueOrThrow({
+      where: { id: session.user.orgId },
+      include: { subscription: true },
+    });
 
-    let customerId = org.stripeCustomerId;
-    if (!customerId) {
+    let customerId = org.subscription?.stripeCustomerId;
+    if (!customerId || customerId.startsWith("pending_") || customerId.startsWith("demo_")) {
       const customer = await stripe.customers.create({
-        email: user.email,
+        email: session.user.email ?? undefined,
         name: org.name,
         metadata: { orgId: org.id },
       });
       customerId = customer.id;
-      await prisma.organization.update({
-        where: { id: org.id },
+      await prisma.subscription.update({
+        where: { orgId: org.id },
         data: { stripeCustomerId: customerId },
       });
     }
@@ -46,9 +49,8 @@ export async function POST(req: NextRequest) {
       mode: "subscription",
       payment_method_types: ["card"],
       line_items: [{ price: priceId, quantity: 1 }],
-      subscription_data: { trial_period_days: 7 },
       success_url: `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/dashboard?checkout=success`,
-      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/pricing?checkout=cancelled`,
+      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/dashboard/settings/billing?checkout=cancel`,
       metadata: { orgId: org.id, tier },
     });
 

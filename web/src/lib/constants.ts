@@ -14,6 +14,9 @@ import {
 } from "lucide-react";
 import type { TierId } from "./tiers";
 
+export { SCAN_PHASES, SCAN_PHASE_COUNT, phaseIndex, phaseLabel } from "./scan-phases";
+export type { ScanPhase } from "./scan-phases";
+
 export interface NavItem {
   id: string;
   label: string;
@@ -25,32 +28,16 @@ export interface NavItem {
 
 export const NAV_ITEMS: NavItem[] = [
   { id: "dashboard", label: "Dashboard", href: "/dashboard", icon: LayoutDashboard, requiredTier: "STARTER" },
-  { id: "scanner", label: "Deep Scanner", href: "/scanner", icon: ScanSearch, requiredTier: "STARTER", badge: "Flagship" },
-  { id: "api", label: "API Security", href: "/api-security", icon: Plug, requiredTier: "PROFESSIONAL" },
-  { id: "agents", label: "Agent Security", href: "/agents", icon: Shield, requiredTier: "BUSINESS" },
-  { id: "cloud", label: "Cloud Guard", href: "/cloud", icon: Cloud, requiredTier: "BUSINESS" },
-  { id: "phishing", label: "Phishing Shield", href: "/phishing", icon: Fish, requiredTier: "BUSINESS" },
-  { id: "darkweb", label: "Dark Web Intel", href: "/darkweb", icon: Eye, requiredTier: "BUSINESS" },
-  { id: "compliance", label: "Compliance Hub", href: "/compliance", icon: ClipboardCheck, requiredTier: "PROFESSIONAL" },
-  { id: "reports", label: "Reports Center", href: "/reports", icon: FileBarChart, requiredTier: "PROFESSIONAL" },
-  { id: "settings", label: "Settings", href: "/settings", icon: Settings, requiredTier: "STARTER" },
-  { id: "academy", label: "Academy", href: "/academy", icon: GraduationCap, requiredTier: "ENTERPRISE" },
-];
-
-export const SCAN_PHASES = [
-  "Reconnaissance",
-  "AI Target Prioritization",
-  "Source Crawl & Download",
-  "Line-by-Line Source Analysis",
-  "AI Vulnerability Inference",
-  "AI Active Exploitation",
-  "Deep Scanning Suite",
-  "OWASP Deep Attack Hunting",
-  "Elite Exploit Suite",
-  "Mega Fuzzing",
-  "Nuclei Template Checks",
-  "Super Scanner Deep Checks",
-  "Exploit Verification",
+  { id: "scanner", label: "Deep Scanner", href: "/dashboard/scanner", icon: ScanSearch, requiredTier: "STARTER", badge: "Flagship" },
+  { id: "api", label: "API Security", href: "/dashboard/api-security", icon: Plug, requiredTier: "PROFESSIONAL", badge: "Featured" },
+  { id: "agents", label: "Agent Security", href: "/dashboard/agent-security", icon: Shield, requiredTier: "BUSINESS", badge: "Agentic" },
+  { id: "cloud", label: "Cloud Guard", href: "/dashboard/cloud-guard", icon: Cloud, requiredTier: "BUSINESS" },
+  { id: "phishing", label: "Phishing Shield", href: "/dashboard/phishing-shield", icon: Fish, requiredTier: "PROFESSIONAL" },
+  { id: "darkweb", label: "Dark Web Intel", href: "/dashboard/dark-web", icon: Eye, requiredTier: "BUSINESS" },
+  { id: "compliance", label: "Compliance Hub", href: "/dashboard/compliance", icon: ClipboardCheck, requiredTier: "PROFESSIONAL" },
+  { id: "reports", label: "Reports Center", href: "/dashboard/reports", icon: FileBarChart, requiredTier: "PROFESSIONAL" },
+  { id: "settings", label: "Settings", href: "/dashboard/settings", icon: Settings, requiredTier: "STARTER" },
+  { id: "academy", label: "Academy", href: "/dashboard/academy", icon: GraduationCap, requiredTier: "ENTERPRISE" },
 ];
 
 export const COLORS = {

@@ -57,6 +57,10 @@ MEGA_QUEUE_SIZE = 2000
 
 VERIFIED_MIN_CONFIDENCE = 90
 
+# Port scanner (Weidman Ch.5)
+PORT_SCAN_TIMEOUT = 2.0
+PORT_SCAN_CONCURRENCY = 50
+
 # Product branding
 PRODUCT_NAME = "QuantumShield"
 PRODUCT_VERSION = "7.1.0"

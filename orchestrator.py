@@ -11,6 +11,10 @@ from core.config import PRIMARY_URLS, VERIFIED_MIN_CONFIDENCE, MEGA_CHECK_TARGET
 from core.domain_utils import normalize_domain, scope_root, urls_for_domain
 from core.progress_tracker import ScanProgress
 from core.subdomain_enum import enumerate_subdomains
+from core.osint_recon import OSINTRecon
+from core.port_scanner import PortScanner
+from core.service_exploits import ServiceExploitScanner
+from core.weidman_engine import WeidmanEngine
 from core.crawler import WebCrawler
 from core.source_analyzer import SourceAnalyzer
 from core.ai_engine import AIEngine
@@ -99,8 +103,57 @@ class MegaScanner:
             if progress_cb:
                 await progress_cb(update)
 
+        # Phase 0: OSINT reconnaissance (Weidman Ch.5 — WHOIS, DNS, AXFR, emails)
+        await emit("osint_recon", 1, "OSINT: WHOIS · DNS · zone transfer · email harvest…")
+        osint_intel: dict = {}
+        service_intel: dict = {}
+        port_open: list[dict] = []
+        try:
+            osint = OSINTRecon()
+            osint_result = await osint.run(self.scope_root)
+            osint_intel = osint_result.get("intel", {})
+            osint_batch = []
+            for f in osint_result.get("findings", []):
+                all_findings.append(f)
+                osint_batch.append(f)
+            await push_threats(osint_batch, "osint_recon")
+            # Merge DNS-discovered subdomains
+            for host in osint_intel.get("subdomains_from_dns", []):
+                if _host_matches_target(normalize_domain(host), self.target_domain):
+                    all_urls.append(f"https://{host}")
+        except Exception as e:
+            await emit("osint_recon", 2, f"OSINT partial: {e}")
+
+        # Phase 0b: Port scanning (Weidman Ch.5 — Nmap-style TCP connect)
+        await emit("port_scan", 2, "TCP port scan on target host…")
+        try:
+            scanner = PortScanner()
+            port_result = await scanner.run(self.scope_root)
+            port_open = port_result.get("open_ports", [])
+            port_batch = []
+            for f in port_result.get("findings", []):
+                all_findings.append(f)
+                port_batch.append(f)
+            await push_threats(port_batch, "port_scan")
+        except Exception as e:
+            await emit("port_scan", 3, f"Port scan partial: {e}")
+
+        # Phase 0c: Remote service exploit analysis (Schreuders lab)
+        await emit("service_exploit_scan", 3, "Remote service vuln analysis · Samba · FTP · SMB…")
+        try:
+            svc = ServiceExploitScanner()
+            svc_result = await svc.run(self.scope_root, port_open)
+            service_intel = svc_result.get("service_intel", {})
+            svc_batch = []
+            for f in svc_result.get("findings", []):
+                all_findings.append(f)
+                svc_batch.append(f)
+            await push_threats(svc_batch, "service_exploit_scan")
+        except Exception as e:
+            await emit("service_exploit_scan", 4, f"Service scan partial: {e}")
+
         # Phase 1: Subdomain enumeration (scoped to selected domain)
-        await emit("subdomain_discovery", 3, "Enumerating subdomains via DNS + crt.sh…")
+        await emit("subdomain_discovery", 5, "Enumerating subdomains via DNS + crt.sh…")
         if cancelled():
             raise ScanCancelled()
         try:
@@ -175,36 +228,40 @@ class MegaScanner:
                     ai_batch.append(f)
         await push_threats(ai_batch, "ai_inference")
 
-        # Phase 6+7: AI exploitation + deep scans + deep attacks + elite exploits IN PARALLEL
-        await emit("ai_exploitation", 20, "Parallel: AI exploits · deep scans · OWASP hunter · elite exploits…")
+        # Phase 6+7: AI exploitation + deep scans + deep attacks + elite + Weidman IN PARALLEL
+        await emit("ai_exploitation", 20, "Parallel: AI exploits · deep scans · OWASP · elite · Weidman Ch.14…")
         if cancelled():
             raise ScanCancelled()
         exploiter = AIExploiter()
         deep = DeepScannerSuite()
         hunter = DeepAttackHunter()
         elite = EliteExploitSuite()
-        ai_exploit_results, deep_results, attack_results, elite_results = await asyncio.gather(
+        weidman = WeidmanEngine()
+        ai_exploit_results, deep_results, attack_results, elite_results, weidman_results = await asyncio.gather(
             exploiter.run(ranked_urls[:15], pages_crawled),
             deep.run_all(ranked_urls[:15], pages_crawled),
             hunter.run_all(ranked_urls[:12], pages_crawled),
             elite.run_all(ranked_urls[:12], pages_crawled),
+            weidman.run_all(ranked_urls[:12], pages_crawled),
         )
         for ar in ai_exploit_results:
             all_findings.append({**ar, "exploitable": ar.get("ai_confirmed", False)})
         all_findings.extend(deep_results)
         all_findings.extend(attack_results)
         all_findings.extend(elite_results)
+        all_findings.extend(weidman_results)
         await push_threats(ai_exploit_results, "ai_exploitation")
         await push_threats(deep_results, "deep_scanning")
         await push_threats(attack_results, "deep_attack_hunt")
         await push_threats(elite_results, "elite_exploits")
+        await push_threats(weidman_results, "weidman_web_tests")
         if cancelled():
             raise ScanCancelled()
         await emit(
             "elite_exploits", 28,
             f"AI: {exploiter.stats.get('attacks_run', 0)} · Deep: {deep.stats.get('checks_run', 0)} · "
-            f"Attacks: {hunter.stats.get('checks', 0)} · Elite: {elite.stats.get('techniques', 0)} techniques / "
-            f"{elite.stats.get('confirmed', 0)} confirmed",
+            f"Attacks: {hunter.stats.get('checks', 0)} · Elite: {elite.stats.get('techniques', 0)} · "
+            f"Weidman: {weidman.stats.get('checks', 0)} checks / {weidman.stats.get('hits', 0)} hits",
             findings_count=len(all_findings),
         )
 
@@ -360,6 +417,13 @@ class MegaScanner:
             "elite_checks": elite.stats.get("checks", 0),
             "elite_hits": elite.stats.get("hits", 0),
             "elite_confirmed": elite.stats.get("confirmed", 0),
+            "weidman_checks": weidman.stats.get("checks", 0),
+            "weidman_hits": weidman.stats.get("hits", 0),
+            "osint_emails": len(osint_intel.get("emails", [])),
+            "osint_dns_records": len(osint_intel.get("dns", {})),
+            "service_exploit_candidates": len(service_intel.get("exploit_candidates", [])),
+            "shell_risk_ports": service_intel.get("shell_risk_ports", []),
+            "vuln_causes": service_intel.get("vuln_causes", {}),
             "mega_checks_run": mega.checks_run,
             "mega_check_target": MEGA_CHECK_TARGET,
             "mega_check_surface": surface,
@@ -390,6 +454,9 @@ class MegaScanner:
             "phases": self.phases,
             "stats": self.stats,
             "subdomains": subdomains_found[:50],
+            "osint_intel": osint_intel,
+            "service_intel": service_intel,
+            "open_ports": port_open,
             "findings": unique,
             "verified_findings": verified_findings,
             "exploit_results": exploit_results,

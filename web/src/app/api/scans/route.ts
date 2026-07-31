@@ -1,80 +1,83 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { requireSession } from "@/lib/auth";
-import { SCANNER_API_URL } from "@/lib/constants";
+import { handleApiError, requireApiSubscription } from "@/lib/api-auth";
+import { getScanModeTier } from "@/lib/feature-gates";
+import { canUseScanMode } from "@/lib/tiers";
+import { startScanSimulation } from "@/lib/scan-engine";
+import { isDemoUserEmail } from "@/lib/demo-auth";
 
 export async function GET() {
   try {
-    const session = await requireSession();
+    const { org } = await requireApiSubscription();
     const scans = await prisma.scan.findMany({
-      where: { orgId: session.orgId },
-      orderBy: { startedAt: "desc" },
+      where: { orgId: org.orgId },
+      include: { domain: { select: { name: true } } },
+      orderBy: { createdAt: "desc" },
       take: 50,
     });
     return NextResponse.json({ scans });
-  } catch {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  } catch (err) {
+    return handleApiError(err);
   }
 }
 
 const startScanSchema = z.object({
-  domain: z.string(),
+  domainId: z.string(),
   mode: z.enum(["LIGHTNING", "STANDARD", "MEGA", "SUPER"]).default("LIGHTNING"),
+  config: z.record(z.unknown()).optional(),
 });
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await requireSession();
+    const { session, org } = await requireApiSubscription();
     const body = await req.json();
-    const { domain, mode } = startScanSchema.parse(body);
+    const data = startScanSchema.parse(body);
+    const isDemo = isDemoUserEmail(session.user.email);
 
-    const org = await prisma.organization.findUniqueOrThrow({ where: { id: session.orgId } });
-    if (org.subscriptionStatus !== "ACTIVE" && org.subscriptionStatus !== "TRIALING") {
-      return NextResponse.json({ error: "Active subscription required" }, { status: 403 });
+    const requiredTier = getScanModeTier(data.mode);
+    if (!canUseScanMode(org.tier, requiredTier, { isDemo })) {
+      return NextResponse.json(
+        { error: `${data.mode} scans require ${requiredTier} plan or higher` },
+        { status: 403 }
+      );
     }
-    if (org.scansUsedThisMonth >= org.scansLimit) {
+
+    if (!isDemo && org.scansUsed >= org.scansLimit) {
       return NextResponse.json({ error: "Monthly scan limit reached" }, { status: 403 });
     }
 
-    const verified = await prisma.domain.findFirst({
-      where: { orgId: session.orgId, domain, verificationStatus: "VERIFIED" },
+    const domain = await prisma.domain.findFirst({
+      where: {
+        id: data.domainId,
+        orgId: org.orgId,
+        ...(isDemo ? {} : { verified: true }),
+      },
     });
-    if (!verified) {
-      return NextResponse.json({ error: "Domain must be verified before scanning" }, { status: 403 });
+    if (!domain) {
+      return NextResponse.json({ error: "Domain not found or not verified" }, { status: 403 });
     }
 
-    const scanType = mode === "SUPER" ? "super" : "mega";
-    const scannerRes = await fetch(
-      `${SCANNER_API_URL}/api/scan?domain=${encodeURIComponent(domain)}&scan_type=${scanType}`,
-      { method: "POST" }
-    );
-    if (!scannerRes.ok) {
-      return NextResponse.json({ error: "Scanner backend unavailable" }, { status: 503 });
-    }
-    const scannerData = await scannerRes.json();
+    const fuzzTotal = data.mode === "MEGA" || data.mode === "SUPER" ? 1_000_000 : 100_000;
 
     const scan = await prisma.scan.create({
       data: {
-        orgId: session.orgId,
-        domainId: verified.id,
-        externalScanId: scannerData.scan_id,
-        targetDomain: domain,
-        mode,
-        status: "RUNNING",
+        orgId: org.orgId,
+        domainId: domain.id,
+        userId: session.user.id,
+        mode: data.mode,
+        status: "PENDING",
+        config: (data.config ?? {}) as Prisma.InputJsonValue,
+        fuzzTotal,
       },
+      include: { domain: { select: { name: true } } },
     });
 
-    await prisma.organization.update({
-      where: { id: session.orgId },
-      data: { scansUsedThisMonth: { increment: 1 } },
-    });
+    startScanSimulation(scan.id).catch(console.error);
 
-    return NextResponse.json({ scan, scanner: scannerData });
+    return NextResponse.json({ scanId: scan.id, scan });
   } catch (err) {
-    if (err instanceof z.ZodError) {
-      return NextResponse.json({ error: err.issues[0].message }, { status: 400 });
-    }
-    return NextResponse.json({ error: "Failed to start scan" }, { status: 500 });
+    return handleApiError(err);
   }
 }

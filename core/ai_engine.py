@@ -146,6 +146,37 @@ VULN_SIGNATURES = {
         "historical_count": 12,
         "base_confidence": 0.5,
     },
+    # Weidman Ch.14 — Penetration Testing book signatures
+    "xpath_injection": {
+        "url_patterns": [r"/login", r"txtUser", r"txtPass", r"/signin", r"/auth"],
+        "keywords": ["xpath", "xml", "login", "authenticate"],
+        "historical_count": 4,
+        "base_confidence": 0.6,
+    },
+    "csrf": {
+        "url_patterns": [r"/login", r"/transfer", r"/account", r"/password"],
+        "keywords": ["csrf", "token", "form", "post", "session"],
+        "historical_count": 6,
+        "base_confidence": 0.5,
+    },
+    "rfi": {
+        "url_patterns": [r"[?&](file|include|page|path)=http", r"include\s*\(\s*\$_GET"],
+        "keywords": ["include", "require", "remote", "php"],
+        "historical_count": 3,
+        "base_confidence": 0.55,
+    },
+    "cmdi": {
+        "url_patterns": [r"[?&](cmd|exec|command|email|ping)=", r";&", r"\|"],
+        "keywords": ["exec", "system", "shell", "command", "ipconfig"],
+        "historical_count": 5,
+        "base_confidence": 0.6,
+    },
+    "blind_sqli": {
+        "url_patterns": [r"[?&](id|page|cat|user)=", r"bookdetail", r"\.aspx"],
+        "keywords": ["database", "query", "sql", "id"],
+        "historical_count": 4,
+        "base_confidence": 0.55,
+    },
 }
 
 
@@ -214,8 +245,9 @@ class AIEngine:
         return predictions
 
     def _estimate_priority(self, vuln_type: str, score: float) -> str:
-        high = {"sqli", "rce", "secret_exposure", "idor", "subdomain_takeover"}
-        medium = {"xss", "open_redirect", "ssrf", "host_header"}
+        high = {"sqli", "rce", "secret_exposure", "idor", "subdomain_takeover",
+                "xpath_injection", "cmdi", "rfi", "blind_sqli"}
+        medium = {"xss", "open_redirect", "ssrf", "host_header", "csrf", "lfi"}
         if vuln_type in high and score >= 0.7:
             return "P2"
         if vuln_type in high or (vuln_type in medium and score >= 0.75):

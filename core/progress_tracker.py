@@ -7,6 +7,9 @@ from datetime import datetime, timezone
 
 
 PHASE_LABELS = {
+    "osint_recon": "OSINT Reconnaissance",
+    "port_scan": "TCP Port Scan",
+    "service_exploit_scan": "Remote Service Analysis",
     "subdomain_discovery": "Subdomain Discovery",
     "ai_prioritization": "AI Target Ranking",
     "source_crawl": "Source Crawl & Download",
@@ -15,7 +18,8 @@ PHASE_LABELS = {
     "ai_exploitation": "AI Active Exploitation",
     "deep_scanning": "Deep Security Scans",
     "deep_attack_hunt": "OWASP Deep Attack Hunter",
-    "elite_exploits": "Elite Exploit Suite (21 Techniques)",
+    "elite_exploits": "Elite Exploit Suite",
+    "weidman_web_tests": "Weidman Web App Tests",
     "mega_1m_checks": "1M+ Parallel Fuzzing",
     "nuclei_checks": "Nuclei Template Checks",
     "super_scanner": "Super Scanner Deep Checks",

@@ -108,9 +108,23 @@ export function tierMeetsRequirement(userTier: TierId, requiredTier: TierId): bo
   return TIER_ORDER.indexOf(userTier) >= TIER_ORDER.indexOf(requiredTier);
 }
 
-export function canAccessModule(userTier: TierId, moduleId: string): boolean {
+export function canAccessModule(
+  userTier: TierId,
+  moduleId: string,
+  opts?: { isDemo?: boolean }
+): boolean {
+  if (opts?.isDemo) return true;
   const required = MODULE_TIER_REQUIREMENTS[moduleId] ?? "ENTERPRISE";
   return tierMeetsRequirement(userTier, required);
+}
+
+export function canUseScanMode(
+  userTier: TierId,
+  requiredTier: TierId,
+  opts?: { isDemo?: boolean }
+): boolean {
+  if (opts?.isDemo) return true;
+  return tierMeetsRequirement(userTier, requiredTier);
 }
 
 export function getTierLimits(tier: TierId) {

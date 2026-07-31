@@ -1,55 +1,70 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { requireSession } from "@/lib/auth";
+import { handleApiError, requireApiOrg, requireApiSubscription } from "@/lib/api-auth";
+import { isDemoUserEmail } from "@/lib/demo-auth";
+
+const DOMAIN_REGEX =
+  /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/i;
 
 const domainSchema = z.object({
-  domain: z.string().regex(/^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z]{2,})+$/),
+  name: z.string().regex(DOMAIN_REGEX, "Invalid domain URL"),
 });
+
+function normalizeDomain(input: string): string {
+  return input.replace(/^https?:\/\//, "").replace(/\/.*$/, "").toLowerCase();
+}
 
 export async function GET() {
   try {
-    const session = await requireSession();
+    const { org } = await requireApiOrg();
     const domains = await prisma.domain.findMany({
-      where: { orgId: session.orgId },
+      where: { orgId: org.orgId },
       orderBy: { createdAt: "desc" },
     });
     return NextResponse.json({ domains });
-  } catch {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  } catch (err) {
+    return handleApiError(err);
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await requireSession();
+    const { session, org } = await requireApiSubscription();
+    const isDemo = isDemoUserEmail(session.user.email);
     const body = await req.json();
-    const { domain } = domainSchema.parse(body);
+    const { name: rawName } = domainSchema.parse(body);
+    const name = normalizeDomain(rawName);
 
-    const org = await prisma.organization.findUniqueOrThrow({ where: { id: session.orgId } });
-    const count = await prisma.domain.count({ where: { orgId: session.orgId } });
-    if (count >= org.domainLimit) {
-      return NextResponse.json({ error: "Domain limit reached. Upgrade your plan." }, { status: 403 });
+    if (!isDemo) {
+      const count = await prisma.domain.count({ where: { orgId: org.orgId } });
+      if (count >= org.domainLimit) {
+        return NextResponse.json({ error: "Domain limit reached. Upgrade your plan." }, { status: 403 });
+      }
     }
 
-    const record = await prisma.domain.upsert({
-      where: { orgId_domain: { orgId: session.orgId, domain } },
-      create: { orgId: session.orgId, domain },
-      update: {},
+    const record = await prisma.domain.create({
+      data: {
+        orgId: org.orgId,
+        name,
+        verified: isDemo,
+      },
     });
 
     return NextResponse.json({
       domain: record,
       verification: {
-        method: "dns_txt",
-        record: `_quantumshield-verify.${domain}`,
-        value: `quantumshield-verify=${record.verificationToken}`,
+        dns: {
+          record: `_quantumshield-verify.${name}`,
+          value: `quantumshield-verify=${record.verificationToken}`,
+        },
+        file: {
+          path: `/.well-known/quantumshield-verify`,
+          content: record.verificationToken,
+        },
       },
     });
   } catch (err) {
-    if (err instanceof z.ZodError) {
-      return NextResponse.json({ error: "Invalid domain" }, { status: 400 });
-    }
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return handleApiError(err);
   }
 }

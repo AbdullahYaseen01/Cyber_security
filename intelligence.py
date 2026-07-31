@@ -26,6 +26,13 @@ THEME_KEYWORDS = {
     "rce": ["rce", "remote code execution", "command injection"],
     "saml": ["saml", "relaystate", "relay state"],
     "file_upload": ["file upload", "arbitrary upload"],
+    "xpath_injection": ["xpath", "xml injection", "xpath injection"],
+    "csrf": ["csrf", "cross-site request forgery"],
+    "rfi": ["rfi", "remote file inclusion"],
+    "cmdi": ["command injection", "os command", "shell injection"],
+    "lfi": ["lfi", "local file inclusion", "path traversal"],
+    "blind_sqli": ["blind sql", "sql injection"],
+    "zone_transfer": ["zone transfer", "axfr", "dns leak"],
 }
 
 # Domain-specific check profiles derived from 843 historical reports

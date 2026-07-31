@@ -57,6 +57,7 @@ _XSS_PAYLOADS = [
 
 _SQLI_PAYLOADS = [
     "'", "' OR '1'='1", "1' AND '1'='1", "' UNION SELECT NULL--", "admin'--",
+    "' OR '1'='1'--", "2 or 1 in (SELECT DB_NAME(0))--",
 ] + [f"' OR '{i}'='{i}" for i in range(20)]
 
 _SSRF_PAYLOADS = [
