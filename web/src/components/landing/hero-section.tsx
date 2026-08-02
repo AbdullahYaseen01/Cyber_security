@@ -96,6 +96,44 @@ function AnimatedStat({ value, label, index }: { value: string; label: string; i
   );
 }
 
+function MetricBlock({
+  value,
+  label,
+  featured = false,
+}: {
+  value: string;
+  label: string;
+  featured?: boolean;
+}) {
+  return (
+    <div
+      className={`relative mb-5 overflow-hidden rounded-xl border text-center ${
+        featured
+          ? "border-cyan-500/30 bg-gradient-to-b from-cyan-500/15 to-cyan-500/5 py-5 px-4"
+          : "border-white/10 bg-white/[0.03] py-4 px-3"
+      }`}
+    >
+      {featured && (
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(0,240,255,0.12)_0%,_transparent_70%)] pointer-events-none" />
+      )}
+      <p
+        className={`relative font-bold font-mono leading-none tracking-tight ${
+          featured ? "text-3xl md:text-4xl text-gradient" : "text-xl text-white"
+        }`}
+      >
+        {value}
+      </p>
+      <p
+        className={`relative mt-1.5 uppercase tracking-[0.15em] font-medium ${
+          featured ? "text-[10px] text-cyan-300/90" : "text-[9px] text-slate-500"
+        }`}
+      >
+        {label}
+      </p>
+    </div>
+  );
+}
+
 function ModuleCard({
   mod,
   index,
@@ -107,6 +145,7 @@ function ModuleCard({
 }) {
   const Icon = mod.icon;
   const isFeatured = variant === "featured";
+  const metric = mod.statHighlight ?? mod.metric;
 
   return (
     <motion.div
@@ -115,74 +154,108 @@ function ModuleCard({
       whileInView="visible"
       viewport={{ once: true, margin: "-40px" }}
       variants={fadeUp}
-      whileHover={{ y: -4, transition: { duration: 0.2 } }}
+      whileHover={{ y: -5, transition: { duration: 0.25 } }}
       className="h-full"
     >
       <Link
         href="/login"
-        className={`flex flex-col h-full glass bg-gradient-to-br ${mod.gradient} border border-white/10 ${mod.border} transition-all duration-300 group relative text-left overflow-hidden ${
-          isFeatured ? "p-6 rounded-2xl" : "p-5 rounded-xl"
+        className={`group relative flex h-full flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#0d1220]/80 backdrop-blur-xl transition-all duration-300 ${mod.border} hover:shadow-[0_8px_40px_-12px_rgba(0,240,255,0.25)] ${
+          isFeatured ? "p-6" : "p-5"
         }`}
       >
-        <div className="absolute inset-0 bg-gradient-to-br from-white/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+        {/* Top accent bar */}
+        <div className={`absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r ${mod.accent} opacity-60 group-hover:opacity-100 transition-opacity`} />
+
+        {/* Background glow */}
+        <div className={`absolute -top-16 -right-16 w-32 h-32 rounded-full bg-gradient-to-br ${mod.gradient} blur-3xl opacity-40 group-hover:opacity-70 transition-opacity pointer-events-none`} />
 
         {/* Header */}
-        <div className="flex items-start justify-between gap-3 mb-4 relative">
-          <div className="flex items-center gap-3 min-w-0">
-            <div
-              className={`flex-shrink-0 rounded-xl bg-white/10 border border-white/10 flex items-center justify-center group-hover:scale-105 transition-transform ${
-                isFeatured ? "w-12 h-12" : "w-10 h-10"
-              }`}
-            >
-              <Icon className={`text-cyan-400 ${isFeatured ? "w-6 h-6" : "w-5 h-5"}`} />
-            </div>
-            <h3 className={`font-semibold text-white leading-tight ${isFeatured ? "text-lg" : "text-base"}`}>
-              {mod.label}
-            </h3>
+        <div className="relative flex items-start justify-between gap-3 mb-5">
+          <div
+            className={`flex-shrink-0 rounded-xl bg-gradient-to-br ${mod.gradient} border border-white/10 flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform ${
+              isFeatured ? "w-11 h-11" : "w-10 h-10"
+            }`}
+          >
+            <Icon className={`text-cyan-300 ${isFeatured ? "w-5 h-5" : "w-4 h-4"}`} />
           </div>
           {mod.badge && (
-            <span className="flex-shrink-0 text-[9px] font-mono px-2 py-1 rounded-full bg-purple-500/25 text-purple-200 border border-purple-500/30 uppercase tracking-wide">
+            <span className="text-[9px] font-mono font-semibold px-2.5 py-1 rounded-full bg-purple-500/20 text-purple-200 border border-purple-400/30 uppercase tracking-wider">
               {mod.badge}
             </span>
           )}
         </div>
 
-        {/* Stat highlight — Deep Scanner only */}
-        {mod.statHighlight && (
-          <div className="relative mb-4 flex items-end gap-3 px-4 py-3.5 rounded-xl bg-cyan-500/[0.08] border border-cyan-500/25">
-            <span className="text-3xl md:text-4xl font-bold font-mono text-gradient leading-none tracking-tight">
-              {mod.statHighlight.value}
-            </span>
-            <span className="text-[10px] text-cyan-300/90 pb-1 uppercase tracking-widest font-medium">
-              {mod.statHighlight.label}
-            </span>
-          </div>
+        <h3 className={`relative font-bold text-white mb-1 ${isFeatured ? "text-xl" : "text-base"}`}>
+          {mod.label}
+        </h3>
+
+        {/* Metric — equal height slot for featured row */}
+        {isFeatured && metric && (
+          <MetricBlock
+            value={metric.value}
+            label={metric.label}
+            featured={Boolean(mod.statHighlight)}
+          />
         )}
 
-        {/* Description */}
-        <p className={`text-slate-400 leading-relaxed flex-1 relative ${isFeatured ? "text-sm" : "text-xs"}`}>
+        <p className={`relative text-slate-400 leading-relaxed flex-1 ${isFeatured ? "text-sm" : "text-xs"}`}>
           {mod.description}
         </p>
 
-        {/* Footer */}
-        <div className="relative mt-5 pt-4 border-t border-white/10">
-          <div className="flex flex-wrap gap-1.5 mb-3">
-            {mod.highlights.map((h) => (
-              <span
-                key={h}
-                className="text-[10px] px-2 py-0.5 rounded-md bg-white/5 text-slate-400 border border-white/5"
-              >
-                {h}
-              </span>
-            ))}
-          </div>
-          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-cyan-400/80 group-hover:text-cyan-300 transition-colors">
-            Explore module
-            <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+        {/* Tags */}
+        <div className="relative mt-5 flex flex-wrap gap-1.5">
+          {mod.highlights.map((h) => (
+            <span
+              key={h}
+              className="text-[10px] px-2 py-1 rounded-lg bg-white/[0.04] text-slate-400 border border-white/[0.06]"
+            >
+              {h}
+            </span>
+          ))}
+        </div>
+
+        {/* CTA */}
+        <div className="relative mt-5 pt-4 border-t border-white/[0.06] flex items-center justify-between">
+          <span className="text-[11px] text-slate-500 group-hover:text-slate-400 transition-colors">
+            Demo available
+          </span>
+          <span className="inline-flex items-center gap-1 text-xs font-semibold text-cyan-400 group-hover:text-cyan-300 transition-colors">
+            Explore
+            <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
           </span>
         </div>
       </Link>
     </motion.div>
+  );
+}
+
+function SectionLabel({ number, title, accent }: { number: string; title: string; accent?: boolean }) {
+  return (
+    <div className="flex items-center gap-4 mb-6">
+      <span
+        className={`text-[10px] font-mono font-bold px-2 py-1 rounded-md border ${
+          accent
+            ? "text-cyan-400 border-cyan-500/30 bg-cyan-500/10"
+            : "text-slate-500 border-white/10 bg-white/[0.03]"
+        }`}
+      >
+        {number}
+      </span>
+      <span
+        className={`text-xs font-semibold uppercase tracking-[0.2em] ${
+          accent ? "text-cyan-400/90" : "text-slate-500"
+        }`}
+      >
+        {title}
+      </span>
+      <div
+        className={`flex-1 h-px ${
+          accent
+            ? "bg-gradient-to-r from-cyan-500/40 to-transparent"
+            : "bg-gradient-to-r from-white/10 to-transparent"
+        }`}
+      />
+    </div>
   );
 }
 
@@ -194,46 +267,32 @@ function PlatformModulesSection() {
       transition={{ duration: 0.6, delay: 0.45 }}
       className="mb-20"
     >
-      <div className="text-center mb-10">
-        <h2 className="text-2xl md:text-3xl font-bold mb-2">
+      <div className="text-center mb-12">
+        <h2 className="text-3xl md:text-4xl font-bold mb-3">
           <span className="text-gradient">Complete Security Platform</span>
         </h2>
-        <p className="text-slate-400 text-sm md:text-base max-w-xl mx-auto">
-          Seven production-ready modules — demo every feature with one click.
+        <p className="text-slate-400 text-sm md:text-base max-w-lg mx-auto">
+          Seven production-ready modules. One dashboard. Demo every feature instantly.
         </p>
       </div>
 
-      <div className="rounded-3xl border border-white/10 bg-white/[0.02] backdrop-blur-sm p-5 md:p-8">
-        {/* Row 1 — Core */}
-        <div className="mb-2">
-          <div className="flex items-center gap-3 mb-5 px-1">
-            <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-cyan-400/80">
-              Core Capabilities
-            </span>
-            <div className="flex-1 h-px bg-gradient-to-r from-cyan-500/30 to-transparent" />
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5">
-            {LANDING_FEATURED_MODULES.map((mod, i) => (
-              <ModuleCard key={mod.id} mod={mod} index={i} variant="featured" />
-            ))}
-          </div>
+      <div className="relative rounded-3xl border border-white/10 bg-gradient-to-b from-white/[0.04] to-transparent p-6 md:p-10 overflow-hidden">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1/2 h-px bg-gradient-to-r from-transparent via-cyan-500/50 to-transparent" />
+
+        {/* Row 1 */}
+        <SectionLabel number="01" title="Core Capabilities" accent />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-6 mb-10 md:mb-12">
+          {LANDING_FEATURED_MODULES.map((mod, i) => (
+            <ModuleCard key={mod.id} mod={mod} index={i} variant="featured" />
+          ))}
         </div>
 
-        <div className="my-7 md:my-8 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-
-        {/* Row 2 — Platform */}
-        <div>
-          <div className="flex items-center gap-3 mb-5 px-1">
-            <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-slate-500">
-              Platform Modules
-            </span>
-            <div className="flex-1 h-px bg-gradient-to-r from-white/10 to-transparent" />
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {LANDING_SECONDARY_MODULES.map((mod, i) => (
-              <ModuleCard key={mod.id} mod={mod} index={i + 3} variant="compact" />
-            ))}
-          </div>
+        {/* Row 2 */}
+        <SectionLabel number="02" title="Platform Modules" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-5">
+          {LANDING_SECONDARY_MODULES.map((mod, i) => (
+            <ModuleCard key={mod.id} mod={mod} index={i + 3} variant="compact" />
+          ))}
         </div>
       </div>
     </motion.div>
@@ -285,7 +344,7 @@ export function HeroSection() {
             Sign In
           </Link>
           <Button variant="glow" asChild>
-            <Link href="/signup">Start for $1/mo</Link>
+            <Link href="/signup">Start for $5/mo</Link>
           </Button>
         </motion.div>
       </nav>
@@ -419,7 +478,7 @@ export function HeroSection() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button variant="glow" size="lg" asChild>
                 <Link href="/signup">
-                  Get Started — $1/mo <ArrowRight className="w-4 h-4" />
+                  Get Started — $5/mo <ArrowRight className="w-4 h-4" />
                 </Link>
               </Button>
               <Button variant="outline" size="lg" asChild>

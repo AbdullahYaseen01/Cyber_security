@@ -7,7 +7,7 @@ import { prisma } from "@/lib/db";
 
 const checkoutSchema = z.object({
   tier: z.enum(["STARTER", "PROFESSIONAL", "BUSINESS", "ENTERPRISE"]),
-  cycle: z.enum(["monthly", "annual"]).default("annual"),
+  cycle: z.enum(["monthly", "quarterly", "annual"]).default("annual"),
 });
 
 export async function POST(req: NextRequest) {

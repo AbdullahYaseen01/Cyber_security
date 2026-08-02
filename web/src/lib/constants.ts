@@ -51,6 +51,8 @@ export interface LandingModule {
   gradient: string;
   border: string;
   statHighlight?: { value: string; label: string };
+  metric?: { value: string; label: string };
+  accent: string;
 }
 
 /** Top row — flagship modules on landing hero */
@@ -64,8 +66,9 @@ export const LANDING_FEATURED_MODULES: LandingModule[] = [
     statHighlight: { value: "1 Million+", label: "Parallel Checks" },
     description: "18-phase offensive security — OSINT recon, port scanning, fuzzing, and exploit verification in real time.",
     highlights: ["18 scan phases", "OSINT recon", "Live SSE stream"],
-    gradient: "from-cyan-500/25 to-blue-500/10",
-    border: "hover:border-cyan-500/40",
+    gradient: "from-cyan-500/20 via-cyan-500/5 to-transparent",
+    border: "hover:border-cyan-400/50",
+    accent: "from-cyan-400 via-cyan-500 to-blue-500",
   },
   {
     id: "api",
@@ -73,10 +76,12 @@ export const LANDING_FEATURED_MODULES: LandingModule[] = [
     href: "/dashboard/api-security",
     icon: Plug,
     badge: "Featured",
+    metric: { value: "OWASP API", label: "Top 10 Coverage" },
     description: "Discover REST, GraphQL, and gRPC endpoints. Test BOLA, JWT flaws, rate limits, and injection.",
     highlights: ["Auto-discovery", "BOLA/IDOR tests", "Risk scoring"],
-    gradient: "from-cyan-500/20 to-cyan-500/5",
-    border: "hover:border-cyan-500/40",
+    gradient: "from-blue-500/15 via-cyan-500/5 to-transparent",
+    border: "hover:border-blue-400/50",
+    accent: "from-blue-400 via-cyan-400 to-cyan-500",
   },
   {
     id: "agents",
@@ -84,10 +89,12 @@ export const LANDING_FEATURED_MODULES: LandingModule[] = [
     href: "/dashboard/agent-security",
     icon: Shield,
     badge: "Agentic",
+    metric: { value: "24/7", label: "Agent Monitoring" },
     description: "Monitor AI agents, MCP servers, and autonomous workflows for tool abuse and privilege escalation.",
     highlights: ["Agent deploy", "Endpoint monitoring", "Token management"],
-    gradient: "from-purple-500/25 to-cyan-500/10",
-    border: "hover:border-purple-500/40",
+    gradient: "from-purple-500/20 via-purple-500/5 to-transparent",
+    border: "hover:border-purple-400/50",
+    accent: "from-purple-400 via-violet-400 to-cyan-400",
   },
 ];
 
@@ -100,8 +107,9 @@ export const LANDING_SECONDARY_MODULES: LandingModule[] = [
     icon: Cloud,
     description: "Multi-cloud CSPM for AWS, Azure, and GCP — misconfigurations, public buckets, and IAM violations.",
     highlights: ["AWS · Azure · GCP", "Misconfig detection", "Compliance mapping"],
-    gradient: "from-sky-500/20 to-blue-500/5",
-    border: "hover:border-sky-500/40",
+    gradient: "from-sky-500/15 to-transparent",
+    border: "hover:border-sky-400/50",
+    accent: "from-sky-400 to-blue-500",
   },
   {
     id: "phishing",
@@ -110,8 +118,9 @@ export const LANDING_SECONDARY_MODULES: LandingModule[] = [
     icon: Fish,
     description: "Run realistic phishing simulations and security awareness campaigns across your organization.",
     highlights: ["Campaign builder", "Click tracking", "Awareness training"],
-    gradient: "from-emerald-500/20 to-green-500/5",
-    border: "hover:border-emerald-500/40",
+    gradient: "from-emerald-500/15 to-transparent",
+    border: "hover:border-emerald-400/50",
+    accent: "from-emerald-400 to-green-500",
   },
   {
     id: "darkweb",
@@ -120,8 +129,9 @@ export const LANDING_SECONDARY_MODULES: LandingModule[] = [
     icon: Eye,
     description: "Monitor credential leaks, breach exposure, and brand mentions across dark web sources.",
     highlights: ["Email monitoring", "Keyword alerts", "Breach intel"],
-    gradient: "from-red-500/20 to-orange-500/5",
-    border: "hover:border-red-500/40",
+    gradient: "from-rose-500/15 to-transparent",
+    border: "hover:border-rose-400/50",
+    accent: "from-rose-400 to-orange-500",
   },
   {
     id: "compliance",
@@ -130,8 +140,9 @@ export const LANDING_SECONDARY_MODULES: LandingModule[] = [
     icon: ClipboardCheck,
     description: "ISO 27001, SOC 2, and GDPR control mapping with gap analysis and task tracking.",
     highlights: ["ISO 27001", "SOC 2", "GDPR"],
-    gradient: "from-blue-500/20 to-indigo-500/5",
-    border: "hover:border-blue-500/40",
+    gradient: "from-indigo-500/15 to-transparent",
+    border: "hover:border-indigo-400/50",
+    accent: "from-indigo-400 to-blue-500",
   },
 ];
 

@@ -9,14 +9,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { TIERS, type TierId } from "@/lib/tiers";
+import { TIERS, type TierId, type BillingCycle, getTierBillingTotal } from "@/lib/tiers";
 
 function SignupForm() {
   const router = useRouter();
   const params = useSearchParams();
   const tier = (params.get("tier") as TierId) ?? "STARTER";
-  const cycle = params.get("cycle") ?? "annual";
+  const cycle = (params.get("cycle") as BillingCycle) ?? "annual";
   const tierConfig = TIERS[tier] ?? TIERS.STARTER;
+  const billingTotal = getTierBillingTotal(tierConfig, cycle);
+  const billingPeriod =
+    cycle === "annual" ? "/year" : cycle === "quarterly" ? "/quarter" : "/month";
 
   const [form, setForm] = useState({ email: "", password: "", name: "", orgName: "" });
   const [loading, setLoading] = useState(false);
@@ -49,8 +52,8 @@ function SignupForm() {
         </div>
         <CardTitle>Create Account</CardTitle>
         <CardDescription>
-          {tierConfig.name} plan · ${cycle === "annual" ? tierConfig.annualPrice : tierConfig.monthlyPrice}
-          {cycle === "annual" ? "/year" : "/month"} · 7-day trial
+          {tierConfig.name} plan · ${billingTotal}
+          {billingPeriod} · 7-day trial
         </CardDescription>
       </CardHeader>
       <CardContent>

@@ -194,7 +194,7 @@ export default function LoginPage() {
             <p className="text-center text-sm text-slate-400">
               No account?{" "}
               <Link href="/signup" className="text-cyan-400 hover:underline">
-                Start for $1/mo
+                Start for $5/mo
               </Link>
             </p>
           </CardContent>

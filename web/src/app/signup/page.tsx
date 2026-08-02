@@ -82,7 +82,7 @@ export default function SignupPage() {
               <Shield className="w-7 h-7 text-white" />
             </div>
             <CardTitle className="text-2xl">Create Account</CardTitle>
-            <CardDescription>Start securing your infrastructure for $1/mo</CardDescription>
+            <CardDescription>Start securing your infrastructure from $5/mo</CardDescription>
           </CardHeader>
 
           <CardContent>

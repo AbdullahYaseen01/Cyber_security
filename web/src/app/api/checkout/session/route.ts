@@ -12,7 +12,7 @@ const stripe = process.env.STRIPE_SECRET_KEY
 
 const checkoutSchema = z.object({
   tier: z.enum(["STARTER", "PROFESSIONAL", "BUSINESS", "ENTERPRISE"]),
-  cycle: z.enum(["monthly", "annual"]).default("monthly"),
+  cycle: z.enum(["monthly", "quarterly", "annual"]).default("monthly"),
 });
 
 export async function POST(req: NextRequest) {

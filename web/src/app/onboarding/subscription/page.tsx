@@ -7,8 +7,9 @@ import { Check, Zap, Crown, Building, Rocket } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { TIERS, type TierId } from "@/lib/tiers";
+import { TIERS, type TierId, type BillingCycle, getTierMonthlyEquivalent, getBillingBilledLabel } from "@/lib/tiers";
 import { cn } from "@/lib/utils";
+import { BillingCycleToggle } from "@/components/pricing/billing-cycle-toggle";
 
 const TIER_ICONS: Record<TierId, React.ElementType> = {
   STARTER: Zap,
@@ -50,7 +51,7 @@ const TIER_FEATURES: Record<TierId, string[]> = {
 
 export default function SubscriptionOnboardingPage() {
   const router = useRouter();
-  const [annual, setAnnual] = useState(false);
+  const [cycle, setCycle] = useState<BillingCycle>("annual");
   const [loading, setLoading] = useState<TierId | null>(null);
 
   async function selectPlan(tier: TierId) {
@@ -59,7 +60,7 @@ export default function SubscriptionOnboardingPage() {
       const res = await fetch("/api/checkout/session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tier, cycle: annual ? "annual" : "monthly" }),
+        body: JSON.stringify({ tier, cycle }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Checkout failed");
@@ -90,36 +91,15 @@ export default function SubscriptionOnboardingPage() {
             Every plan includes real security scanning. No free tier.
           </p>
 
-          <div className="flex items-center justify-center gap-3 mt-6">
-            <span className={cn("text-sm", !annual && "text-white")}>Monthly</span>
-            <button
-              type="button"
-              onClick={() => setAnnual(!annual)}
-              className={cn(
-                "relative w-12 h-6 rounded-full transition-colors",
-                annual ? "bg-cyan-500" : "bg-white/20"
-              )}
-            >
-              <span
-                className={cn(
-                  "absolute top-1 w-4 h-4 rounded-full bg-white transition-transform",
-                  annual ? "translate-x-7" : "translate-x-1"
-                )}
-              />
-            </button>
-            <span className={cn("text-sm", annual && "text-white")}>
-              Annual <span className="text-green-400 text-xs">(20% off)</span>
-            </span>
-          </div>
+          <BillingCycleToggle value={cycle} onChange={setCycle} className="mt-6" />
         </motion.div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {(Object.keys(TIERS) as TierId[]).map((tierId, i) => {
             const tier = TIERS[tierId];
             const Icon = TIER_ICONS[tierId];
-            const price = annual
-              ? Math.round(tier.annualPrice / 12)
-              : tier.monthlyPrice;
+            const price = Math.round(getTierMonthlyEquivalent(tier, cycle));
+            const billedLabel = getBillingBilledLabel(tier, cycle);
             const isPopular = tierId === "BUSINESS";
 
             return (
@@ -149,11 +129,7 @@ export default function SubscriptionOnboardingPage() {
                       <span className="text-4xl font-bold font-mono text-white">${price}</span>
                       <span className="text-slate-400 text-sm">/mo</span>
                     </div>
-                    {annual && (
-                      <CardDescription>
-                        Billed ${tier.annualPrice}/year
-                      </CardDescription>
-                    )}
+                    {billedLabel && <CardDescription>{billedLabel}</CardDescription>}
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <ul className="space-y-2">
