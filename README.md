@@ -2,14 +2,21 @@
 
 World-class subscription-only cybersecurity platform built around a flagship **Deep Web Vulnerability Scanner** with 9 integrated security modules.
 
+## Deploy on Vercel
+
+> **Important:** Set **Root Directory** to `web` in Vercel project settings.  
+> Without this, Vercel may deploy the old Python API from the repo root instead of the Next.js app.
+
+See **[DEPLOY.md](./DEPLOY.md)** for full steps and environment variables.
+
 ## Architecture
 
 | Layer | Stack |
 |-------|-------|
-| **Frontend** | Next.js 14, TypeScript, Tailwind, shadcn/ui, Framer Motion, Recharts |
-| **Scanner API** | Python FastAPI, 13-phase pipeline, SSE threat stream |
-| **Platform DB** | PostgreSQL (Prisma), Redis |
-| **Billing** | Stripe (no free tier, $1 Starter minimum) |
+| **Frontend** | Next.js 15, TypeScript, Tailwind, shadcn/ui, Framer Motion |
+| **Scanner API** | Python FastAPI (optional local), SSE threat stream |
+| **Platform DB** | PostgreSQL (Prisma) |
+| **Billing** | Stripe (Starter from $5/mo) |
 
 ## Quick Start (Local Dev)
 
@@ -62,10 +69,10 @@ docker compose up --build
 
 | Tier | Price | Domains | Scans/mo |
 |------|-------|---------|----------|
-| Starter | $1/mo | 1 | 10 |
-| Professional | $29/mo | 5 | 100 |
-| Business | $99/mo | 25 | 500 |
-| Enterprise | $299/mo | Unlimited | Unlimited |
+| Starter | $5/mo | 1 | 10 |
+| Professional | $39/mo | 5 | 100 |
+| Business | $129/mo | 25 | 500 |
+| Enterprise | $399/mo | Unlimited | Unlimited |
 
 **No free tier.** 7-day trial on all plans (credit card required).
 
