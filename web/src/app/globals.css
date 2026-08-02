@@ -61,6 +61,9 @@ body {
   .animate-grid-drift {
     animation: grid-drift 20s linear infinite;
   }
+  .animate-marquee {
+    animation: marquee 28s linear infinite;
+  }
 }
 
 @keyframes float {
@@ -83,6 +86,11 @@ body {
 @keyframes grid-drift {
   0% { background-position: 0 0; }
   100% { background-position: 60px 60px; }
+}
+
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
 }
 
 /* Scrollbar */

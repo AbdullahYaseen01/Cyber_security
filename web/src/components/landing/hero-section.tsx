@@ -1,8 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { motion, useInView } from "framer-motion";
-import { useRef } from "react";
+import { motion } from "framer-motion";
 import {
   Shield, ArrowRight, Radar, Target, Lock,
   Globe, Brain, Radio, Sparkles, Wand2,
@@ -16,11 +15,13 @@ import {
   type LandingModule,
 } from "@/lib/constants";
 
-const STATS = [
-  { value: "7", label: "Security Modules" },
-  { value: "1M+", label: "Parallel Checks" },
-  { value: "18", label: "Scan Phases" },
-  { value: "90%", label: "Verify Threshold" },
+const MARKETING_HIGHLIGHTS = [
+  { emoji: "🔍", label: "1M+ Fuzzing", accent: "border-cyan-500/30 bg-cyan-500/10" },
+  { emoji: "📡", label: "Live Threat Stream", accent: "border-purple-500/30 bg-purple-500/10" },
+  { emoji: "🤖", label: "AI Exploitation", accent: "border-violet-500/30 bg-violet-500/10" },
+  { emoji: "💀", label: "21 Elite Techniques", accent: "border-red-500/30 bg-red-500/10" },
+  { emoji: "☁️", label: "Cloud CSPM", accent: "border-sky-500/30 bg-sky-500/10" },
+  { emoji: "📋", label: "11 Report Standard", accent: "border-amber-500/30 bg-amber-500/10" },
 ];
 
 const HERO_FEATURES = [
@@ -77,21 +78,49 @@ const fadeUp = {
   }),
 };
 
-function AnimatedStat({ value, label, index }: { value: string; label: string; index: number }) {
-  const ref = useRef(null);
-  const inView = useInView(ref, { once: true });
-
+function MarketingHighlights() {
   return (
     <motion.div
-      ref={ref}
-      custom={index}
-      initial="hidden"
-      animate={inView ? "visible" : "hidden"}
-      variants={fadeUp}
-      className="text-center"
+      initial={{ opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ duration: 0.6 }}
+      className="mb-20"
     >
-      <div className="text-3xl md:text-4xl font-bold font-mono text-gradient">{value}</div>
-      <div className="text-xs text-slate-500 mt-1 uppercase tracking-wider">{label}</div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4">
+        {MARKETING_HIGHLIGHTS.map((item, i) => (
+          <motion.div
+            key={item.label}
+            custom={i}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={fadeUp}
+            whileHover={{ y: -4, scale: 1.03 }}
+            className={`group relative flex flex-col items-center justify-center text-center p-4 md:p-5 rounded-2xl border backdrop-blur-sm transition-all duration-300 hover:shadow-[0_0_30px_-5px_rgba(0,240,255,0.3)] ${item.accent}`}
+          >
+            <span className="text-2xl md:text-3xl mb-2 group-hover:scale-110 transition-transform drop-shadow-[0_0_12px_rgba(0,240,255,0.4)]">
+              {item.emoji}
+            </span>
+            <span className="text-xs md:text-sm font-semibold text-white leading-tight">
+              {item.label}
+            </span>
+          </motion.div>
+        ))}
+      </div>
+
+      {/* Scrolling marquee — duplicate for motion on wide screens */}
+      <div className="mt-4 overflow-hidden rounded-xl border border-white/5 bg-white/[0.02] py-3 hidden md:block">
+        <div className="flex animate-marquee whitespace-nowrap gap-10">
+          {[...MARKETING_HIGHLIGHTS, ...MARKETING_HIGHLIGHTS].map((item, i) => (
+            <span key={`${item.label}-${i}`} className="inline-flex items-center gap-2 text-sm text-slate-400">
+              <span>{item.emoji}</span>
+              <span className="font-medium text-slate-300">{item.label}</span>
+              <span className="text-cyan-500/40">·</span>
+            </span>
+          ))}
+        </div>
+      </div>
     </motion.div>
   );
 }
@@ -413,17 +442,7 @@ export function HeroSection() {
 
         <PlatformModulesSection />
 
-        {/* Stats bar */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.5 }}
-          className="grid grid-cols-2 md:grid-cols-4 gap-8 max-w-3xl mx-auto mb-20 p-6 rounded-2xl glass"
-        >
-          {STATS.map((stat, i) => (
-            <AnimatedStat key={stat.label} {...stat} index={i} />
-          ))}
-        </motion.div>
+        <MarketingHighlights />
 
         {/* Deep-dive capability cards */}
         <div className="text-center mb-10">
