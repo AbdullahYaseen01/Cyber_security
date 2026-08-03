@@ -1,73 +1,138 @@
-# Deploy QuantumShield (Vercel)
+# Deploy QuantumShield (Vercel + Supabase)
 
 The **Next.js SaaS app lives in the `web/` folder**.
 
-## Vercel — required settings
+**Production URL:** https://cyber-security-ruddy.vercel.app
 
-**Your production URL:** https://cyber-security-ruddy.vercel.app
+---
 
-1. Import: https://github.com/AbdullahYaseen01/Cyber_security
-2. **Settings → General → Root Directory → `web`** ← **MUST be set**
-   - If you skip this, Vercel tries to run Python from repo root and crashes with `FUNCTION_INVOCATION_FAILED`
-3. Leave Install/Build commands **empty** when Root Directory is `web` (uses `web/vercel.json`)
-4. **Settings → Environment Variables** (Production):
-   - `DATABASE_URL` — PostgreSQL connection string
-   - `AUTH_SECRET` — min 32 characters (e.g. `openssl rand -base64 32`)
-   - `NEXT_PUBLIC_APP_URL` — your Vercel URL (e.g. `https://your-app.vercel.app`)
-   - `AUTH_URL` — same as `NEXT_PUBLIC_APP_URL`
-5. **Deployments → Redeploy** → enable **Clear build cache**
+## Step 1 — Create Supabase project
 
-## Build settings (auto from `web/vercel.json`)
+1. Go to [supabase.com](https://supabase.com) → **New project**
+2. Save your database password
+3. Wait for the project to finish provisioning
 
-| Setting | Value |
-|---------|--------|
-| Root Directory | **`web`** |
-| Framework | Next.js |
-| Install | `npm install` |
-| Build | `prisma generate && next build` |
+---
 
-## Troubleshooting failed builds
+## Step 2 — Get Supabase credentials
 
-| Problem | Fix |
-|---------|-----|
-| `FUNCTION_INVOCATION_FAILED` on every page | **Root Directory must be `web`** — do not deploy repo root (Python `api/` crashes) |
-| Old light-theme UI deploys | Root Directory must be `web`, not repo root |
-| Build fails after `prisma generate` | Clear build cache and redeploy |
-| `AUTH_SECRET` missing | Add env var in Vercel settings |
-| Wrong app version | Do **not** use repo-root `legacy-static/` — only `web/` |
+In **Supabase Dashboard → Project Settings**:
 
-## Troubleshooting 500 / FUNCTION_INVOCATION_FAILED
+### Database (Settings → Database → Connection string)
 
-| Problem | Fix |
-|---------|-----|
-| Serverless function crashes on load | Set **all** required env vars (see below) |
-| `DATABASE_URL` points to localhost | Use a **hosted** PostgreSQL (Neon, Supabase, Vercel Postgres) — Vercel cannot reach your local machine |
-| Missing `AUTH_SECRET` | Generate with `openssl rand -base64 32` and add in Vercel |
-| Login/demo fails | Database must be reachable; run `npx prisma db push` against the hosted DB once |
-| OAuth buttons missing | Optional — set `GOOGLE_*` / `GITHUB_*` only if you want social login |
+| Variable | Which string to copy |
+|----------|---------------------|
+| `DATABASE_URL` | **Transaction pooler** (port **6543**, add `?pgbouncer=true`) |
+| `DIRECT_URL` | **Session mode** or **Direct** (port **5432**) |
 
-**Required env vars for production:**
+### API (Settings → API)
 
-```
-DATABASE_URL=postgresql://...        # hosted Postgres (not localhost)
-AUTH_SECRET=...                    # min 32 chars
-AUTH_URL=https://your-app.vercel.app
-NEXT_PUBLIC_APP_URL=https://your-app.vercel.app
+| Variable | Value |
+|----------|-------|
+| `NEXT_PUBLIC_SUPABASE_URL` | Project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `anon` `public` key |
+| `SUPABASE_SERVICE_ROLE_KEY` | `service_role` key (keep secret) |
+
+---
+
+## Step 3 — Initialize database (run once)
+
+On your machine, from the `web/` folder:
+
+```bash
+cd web
+cp .env.example .env
+# Paste your Supabase values into .env
+
+npm install
+npm run db:setup
 ```
 
-## Demo login (after deploy)
+This runs `prisma db push` + seeds the demo user.
 
-- URL: `/login`
+---
+
+## Step 4 — Vercel environment variables
+
+**Vercel → Project → Settings → Environment Variables → Production:**
+
+```
+DATABASE_URL=postgresql://postgres.[ref]:[pass]@...pooler.supabase.com:6543/postgres?pgbouncer=true
+DIRECT_URL=postgresql://postgres.[ref]:[pass]@...pooler.supabase.com:5432/postgres
+NEXT_PUBLIC_SUPABASE_URL=https://[ref].supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
+SUPABASE_SERVICE_ROLE_KEY=eyJ...
+AUTH_SECRET=<run: openssl rand -base64 32>
+AUTH_URL=https://cyber-security-ruddy.vercel.app
+NEXT_PUBLIC_APP_URL=https://cyber-security-ruddy.vercel.app
+SETUP_SECRET=<any random string for one-time setup>
+```
+
+> **Note:** If you set `SUPABASE_SERVICE_ROLE_KEY` but forget `AUTH_SECRET`, auth will still work (auto-derived secret).
+
+---
+
+## Step 5 — Vercel project settings
+
+1. **Root Directory → `web`** (required)
+2. **Deployments → Redeploy** with **Clear build cache**
+
+---
+
+## Step 6 — Verify deployment
+
+```bash
+curl https://cyber-security-ruddy.vercel.app/api/health
+```
+
+Expected:
+```json
+{
+  "authSecret": true,
+  "database": true,
+  "supabase": true,
+  "databaseReachable": true,
+  "ready": true
+}
+```
+
+If `databaseReachable` is false, run `npm run db:setup` locally with your Supabase `DIRECT_URL`.
+
+**Or** call the setup API once (after deploy):
+
+```bash
+curl -X POST https://cyber-security-ruddy.vercel.app/api/setup \
+  -H "Authorization: Bearer YOUR_SETUP_SECRET"
+```
+
+---
+
+## Demo login
+
+- URL: https://cyber-security-ruddy.vercel.app/login
 - Email: `demo@quantumshield.io`
 - Password: `Demo1234!`
+
+---
+
+## Troubleshooting
+
+| Problem | Fix |
+|---------|-----|
+| "Server configuration" error on login | Add `AUTH_SECRET` (32+ chars) or `SUPABASE_SERVICE_ROLE_KEY` to Vercel |
+| Demo login fails | Run `npm run db:setup` with Supabase `DIRECT_URL` |
+| `FUNCTION_INVOCATION_FAILED` | Root Directory must be `web` |
+| Database connection timeout | Use pooler URL (port 6543) for `DATABASE_URL` |
+| Build fails on `DIRECT_URL` | Add `DIRECT_URL` env var in Vercel |
 
 ## Local dev
 
 ```bash
 cd web
 cp .env.example .env
+# For local Postgres, set DIRECT_URL same as DATABASE_URL
 npm install
-npx prisma db push
+npm run db:setup
 npm run dev
 ```
 

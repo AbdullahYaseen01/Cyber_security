@@ -6,6 +6,7 @@ import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
+import { getAuthSecret, isDatabaseConfigured } from "@/lib/env";
 import { authConfig, type SessionUser } from "./auth.config";
 import { ensureDemoUser, isDemoLogin } from "@/lib/demo-auth";
 
@@ -35,10 +36,13 @@ const oauthProviders = [
     : []),
 ];
 
+const authSecret = getAuthSecret();
+const useAdapter = isDatabaseConfigured() && oauthProviders.length > 0;
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
-  adapter: PrismaAdapter(prisma),
-  secret: process.env.AUTH_SECRET,
+  ...(useAdapter ? { adapter: PrismaAdapter(prisma) } : {}),
+  secret: authSecret || undefined,
   providers: [
     ...oauthProviders,
     Credentials({
@@ -52,6 +56,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (!parsed.success) return null;
 
         if (isDemoLogin(parsed.data.email, parsed.data.password)) {
+          if (!isDatabaseConfigured()) {
+            throw new Error("Database not configured. Set DATABASE_URL in Vercel.");
+          }
           const { user, membership } = await ensureDemoUser();
           return {
             id: user.id,

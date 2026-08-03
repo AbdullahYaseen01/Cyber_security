@@ -55,7 +55,11 @@ export default function LoginPage() {
     });
 
     if (result?.error) {
-      toast.error("Invalid email or password");
+      if (result.error === "Configuration") {
+        toast.error("Server not configured. Add AUTH_SECRET and DATABASE_URL in Vercel.");
+      } else {
+        toast.error("Invalid email or password");
+      }
       return;
     }
 
@@ -72,7 +76,11 @@ export default function LoginPage() {
         redirect: false,
       });
       if (result?.error) {
-        toast.error("Demo login failed");
+        if (result.error === "Configuration") {
+          toast.error("Server not configured. Add Supabase env vars in Vercel.");
+        } else {
+          toast.error("Demo login failed — database may not be set up yet");
+        }
         return;
       }
       await completeLogin(router);
