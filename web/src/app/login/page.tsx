@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useFormStatus } from "react-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -17,6 +18,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { DEMO_CREDENTIALS } from "@/lib/demo-auth";
 import { waitForSessionUser, mapSessionToStoreUser } from "@/lib/session-client";
 import { useAuthStore } from "@/store";
+import { loginWithDemo } from "./actions";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -25,23 +27,31 @@ const loginSchema = z.object({
 
 type LoginForm = z.infer<typeof loginSchema>;
 
+function DemoLoginButton() {
+  const { pending } = useFormStatus();
+  return (
+    <Button type="submit" variant="glow" size="sm" className="flex-1" disabled={pending}>
+      <Sparkles className="w-3.5 h-3.5" />
+      {pending ? "Signing in..." : "Use Demo Account"}
+    </Button>
+  );
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const setUser = useAuthStore((s) => s.setUser);
-  const [demoLoading, setDemoLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const {
     register,
     handleSubmit,
-    setValue,
     formState: { errors, isSubmitting },
   } = useForm<LoginForm>({ resolver: zodResolver(loginSchema) });
 
   async function completeLogin() {
-    const user = await waitForSessionUser();
+    const user = await waitForSessionUser(30, 200);
     if (!user?.id) {
       toast.error("Session not ready. Please try again.");
-      return;
+      return false;
     }
 
     const mapped = mapSessionToStoreUser(user);
@@ -57,6 +67,7 @@ export default function LoginPage() {
       router.push("/dashboard");
     }
     router.refresh();
+    return true;
   }
 
   async function onSubmit(data: LoginForm) {
@@ -76,39 +87,6 @@ export default function LoginPage() {
     }
 
     await completeLogin();
-  }
-
-  async function handleDemoLogin() {
-    setDemoLoading(true);
-    try {
-      // Pre-provision demo user + org in database
-      const provision = await fetch("/api/auth/demo", { method: "POST" });
-      if (!provision.ok) {
-        const err = await provision.json().catch(() => ({}));
-        throw new Error(err.error ?? "Could not prepare demo account");
-      }
-
-      // Same flow as manual login — reuse form submit path
-      setValue("email", DEMO_CREDENTIALS.email);
-      setValue("password", DEMO_CREDENTIALS.password);
-
-      const result = await signIn("credentials", {
-        email: DEMO_CREDENTIALS.email,
-        password: DEMO_CREDENTIALS.password,
-        redirect: false,
-      });
-
-      if (result?.error) {
-        throw new Error(result.error);
-      }
-
-      await completeLogin();
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Demo login failed";
-      toast.error(msg === "CredentialsSignin" ? "Demo login failed — try again" : msg);
-    } finally {
-      setDemoLoading(false);
-    }
   }
 
   function copyCredentials() {
@@ -161,17 +139,10 @@ export default function LoginPage() {
                 </div>
               </div>
               <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant="glow"
-                  size="sm"
-                  className="flex-1"
-                  onClick={handleDemoLogin}
-                  disabled={demoLoading || isSubmitting}
-                >
-                  <Sparkles className="w-3.5 h-3.5" />
-                  {demoLoading ? "Signing in..." : "Use Demo Account"}
-                </Button>
+                {/* Server action — reliable login without client-side signIn race */}
+                <form action={loginWithDemo} className="flex-1">
+                  <DemoLoginButton />
+                </form>
                 <Button type="button" variant="secondary" size="sm" onClick={copyCredentials}>
                   {copied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
                 </Button>
@@ -218,7 +189,7 @@ export default function LoginPage() {
                 )}
               </div>
 
-              <Button type="submit" variant="secondary" className="w-full" disabled={isSubmitting || demoLoading}>
+              <Button type="submit" variant="secondary" className="w-full" disabled={isSubmitting}>
                 {isSubmitting ? "Signing in..." : "Sign In"}
               </Button>
             </form>
