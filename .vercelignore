@@ -6,5 +6,6 @@ __pycache__/
 data/history/
 data/reports/
 data/sources/
-data/platform/
+legacy-static/
+static/
 .git/

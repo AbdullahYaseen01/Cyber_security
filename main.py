@@ -290,7 +290,7 @@ app.include_router(platform_router)
 
 @app.get("/", response_class=HTMLResponse)
 async def index():
-    with open(ROOT / "static" / "index.html", encoding="utf-8") as f:
+    with open(ROOT / "legacy-static" / "index.html", encoding="utf-8") as f:
         return HTMLResponse(f.read())
 
 
@@ -658,4 +658,4 @@ async def alert_channels():
     return {"channels": platform.alert_channels()}
 
 
-app.mount("/static", StaticFiles(directory=str(ROOT / "static")), name="static")
+app.mount("/static", StaticFiles(directory=str(ROOT / "legacy-static")), name="static")

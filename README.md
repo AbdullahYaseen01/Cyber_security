@@ -1,5 +1,8 @@
 # QuantumShield — Enterprise Cybersecurity SaaS Platform
 
+> **Deploy the NEW app (dark theme on localhost:3000):** set Vercel **Root Directory** to `web`.  
+> The old light-theme UI in `legacy-static/` is not the product — use the Next.js app in `web/`.
+
 World-class subscription-only cybersecurity platform built around a flagship **Deep Web Vulnerability Scanner** with 9 integrated security modules.
 
 ## Deploy on Vercel

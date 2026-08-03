@@ -6,7 +6,7 @@ If Vercel deploys an old static/Python UI, the project **Root Directory** was no
 
 ## Vercel — correct setup
 
-1. Import: https://github.com/ayaseen-lab/quantum_shield
+1. Import: https://github.com/AbdullahYaseen01/Cyber_security
 2. **Settings → General → Root Directory → `web`** (required)
 3. **Settings → Environment Variables** (Production):
    - `DATABASE_URL` — PostgreSQL connection string
