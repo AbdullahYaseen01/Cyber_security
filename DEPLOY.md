@@ -4,9 +4,11 @@ The **Next.js SaaS app lives in the `web/` folder**.
 
 ## Vercel — required settings
 
+**Your production URL:** https://cyber-security-ruddy.vercel.app
+
 1. Import: https://github.com/AbdullahYaseen01/Cyber_security
 2. **Settings → General → Root Directory → `web`** ← **MUST be set**
-   - If you skip this, Vercel may try to run the Python `api/` folder and crash with `FUNCTION_INVOCATION_FAILED`
+   - If you skip this, Vercel tries to run Python from repo root and crashes with `FUNCTION_INVOCATION_FAILED`
 3. Leave Install/Build commands **empty** when Root Directory is `web` (uses `web/vercel.json`)
 4. **Settings → Environment Variables** (Production):
    - `DATABASE_URL` — PostgreSQL connection string

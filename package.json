@@ -1,0 +1,8 @@
+{
+  "name": "quantumshield",
+  "private": true,
+  "description": "Deploy the Next.js app in web/ — set Vercel Root Directory to web for best results.",
+  "scripts": {
+    "build": "cd web && npm install && npx prisma generate && npm run build"
+  }
+}
