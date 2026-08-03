@@ -102,7 +102,23 @@ export async function ensureDemoUser() {
     });
   }
 
+  await ensureDemoDomains(membership.orgId);
+
   return { user, membership };
+}
+
+async function ensureDemoDomains(orgId: string) {
+  await prisma.domain.upsert({
+    where: { orgId_name: { orgId, name: "demo.quantumshield.io" } },
+    create: {
+      orgId,
+      name: "demo.quantumshield.io",
+      verified: true,
+      securityScore: 92,
+      grade: "A",
+    },
+    update: { verified: true, securityScore: 92, grade: "A" },
+  });
 }
 
 export function demoOrgContext(membership: {

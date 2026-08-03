@@ -1,7 +1,18 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Standalone is for Docker only — breaks Vercel deployments
   ...(process.env.VERCEL ? {} : { output: "standalone" }),
+  compress: true,
+  poweredByHeader: false,
+  experimental: {
+    optimizePackageImports: [
+      "lucide-react",
+      "recharts",
+      "framer-motion",
+      "@radix-ui/react-dialog",
+      "@radix-ui/react-dropdown-menu",
+      "@radix-ui/react-tabs",
+    ],
+  },
   async redirects() {
     return [
       { source: "/cloud", destination: "/dashboard/cloud-guard", permanent: false },
@@ -23,6 +34,14 @@ const nextConfig = {
       {
         source: "/scanner-api/:path*",
         destination: `${scannerUrl}/:path*`,
+      },
+    ];
+  },
+  async headers() {
+    return [
+      {
+        source: "/_next/static/:path*",
+        headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
       },
     ];
   },

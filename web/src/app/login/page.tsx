@@ -15,6 +15,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { DEMO_CREDENTIALS } from "@/lib/demo-auth";
+import { waitForSessionUser, mapSessionToStoreUser } from "@/lib/session-client";
+import { useAuthStore } from "@/store";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -23,33 +25,43 @@ const loginSchema = z.object({
 
 type LoginForm = z.infer<typeof loginSchema>;
 
-async function completeLogin(router: ReturnType<typeof useRouter>) {
-  const sessionRes = await fetch("/api/auth/session");
-  const { user } = await sessionRes.json();
-
-  toast.success("Welcome back!");
-  if (user?.needsOnboarding) {
-    router.push("/onboarding/organization");
-  } else if (user?.subscriptionStatus !== "ACTIVE" && !user?.isDemo) {
-    router.push("/onboarding/subscription");
-  } else {
-    router.push("/dashboard");
-  }
-}
-
 export default function LoginPage() {
   const router = useRouter();
+  const setUser = useAuthStore((s) => s.setUser);
   const [demoLoading, setDemoLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<LoginForm>({ resolver: zodResolver(loginSchema) });
 
+  async function completeLogin() {
+    const user = await waitForSessionUser();
+    if (!user?.id) {
+      toast.error("Session not ready. Please try again.");
+      return;
+    }
+
+    const mapped = mapSessionToStoreUser(user);
+    if (mapped) setUser(mapped);
+
+    toast.success(user.isDemo ? "Demo account ready — all features unlocked!" : "Welcome back!");
+
+    if (user.needsOnboarding) {
+      router.push("/onboarding/organization");
+    } else if (user.subscriptionStatus !== "ACTIVE" && !user.isDemo) {
+      router.push("/onboarding/subscription");
+    } else {
+      router.push("/dashboard");
+    }
+    router.refresh();
+  }
+
   async function onSubmit(data: LoginForm) {
     const result = await signIn("credentials", {
-      email: data.email,
+      email: data.email.trim(),
       password: data.password,
       redirect: false,
     });
@@ -63,27 +75,37 @@ export default function LoginPage() {
       return;
     }
 
-    await completeLogin(router);
+    await completeLogin();
   }
 
   async function handleDemoLogin() {
     setDemoLoading(true);
     try {
-      await fetch("/api/auth/demo", { method: "POST" });
+      // Pre-provision demo user + org in database
+      const provision = await fetch("/api/auth/demo", { method: "POST" });
+      if (!provision.ok) {
+        const err = await provision.json().catch(() => ({}));
+        throw new Error(err.error ?? "Could not prepare demo account");
+      }
+
+      // Same flow as manual login — reuse form submit path
+      setValue("email", DEMO_CREDENTIALS.email);
+      setValue("password", DEMO_CREDENTIALS.password);
+
       const result = await signIn("credentials", {
         email: DEMO_CREDENTIALS.email,
         password: DEMO_CREDENTIALS.password,
         redirect: false,
       });
+
       if (result?.error) {
-        if (result.error === "Configuration") {
-          toast.error("Server not configured. Add Supabase env vars in Vercel.");
-        } else {
-          toast.error("Demo login failed — database may not be set up yet");
-        }
-        return;
+        throw new Error(result.error);
       }
-      await completeLogin(router);
+
+      await completeLogin();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Demo login failed";
+      toast.error(msg === "CredentialsSignin" ? "Demo login failed — try again" : msg);
     } finally {
       setDemoLoading(false);
     }
@@ -171,6 +193,7 @@ export default function LoginPage() {
                 <Input
                   id="email"
                   type="email"
+                  autoComplete="email"
                   {...register("email")}
                   placeholder="you@company.com"
                   className="mt-1"
@@ -185,6 +208,7 @@ export default function LoginPage() {
                 <Input
                   id="password"
                   type="password"
+                  autoComplete="current-password"
                   {...register("password")}
                   placeholder="••••••••"
                   className="mt-1"

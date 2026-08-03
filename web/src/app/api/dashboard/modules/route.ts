@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { handleApiError, requireApiOrg } from "@/lib/api-auth";
 import { canAccessModule } from "@/lib/tiers";
+import { isDemoUserEmail } from "@/lib/demo-auth";
 
 const MODULES = [
   { id: "scanner", label: "Scanner", tierKey: "scanner" },
@@ -16,7 +17,8 @@ const MODULES = [
 
 export async function GET() {
   try {
-    const { org } = await requireApiOrg();
+    const { session, org } = await requireApiOrg();
+    const isDemo = isDemoUserEmail(session.user.email);
 
     const [domains, apiEndpoints, agents, cloudAccounts, campaigns, alerts, tasks] =
       await Promise.all([
@@ -60,7 +62,7 @@ export async function GET() {
 
     const modules = MODULES.map((m) => {
       const score = scores[m.id] ?? 0;
-      const locked = !canAccessModule(org.tier, m.id);
+      const locked = !canAccessModule(org.tier, m.id, { isDemo });
       const status = locked ? "locked" : score >= 70 ? "healthy" : score >= 40 ? "warning" : "critical";
       return { ...m, score, locked, status };
     });

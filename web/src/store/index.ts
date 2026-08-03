@@ -13,6 +13,7 @@ interface UserState {
   subscriptionStatus: string;
   scansUsed: number;
   scansLimit: number;
+  isDemo?: boolean;
 }
 
 interface UIState {

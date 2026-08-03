@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { canUseScanMode, type TierId } from "@/lib/tiers";
+import { isDemoUser } from "@/lib/demo-auth";
 import { useAuthStore } from "@/store";
 import { cn } from "@/lib/utils";
 
@@ -34,6 +35,7 @@ export default function NewScanPage() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const tier = user?.tier ?? "STARTER";
+  const isDemo = isDemoUser(user);
 
   const { data: domainsData, isLoading } = useQuery({
     queryKey: ["domains"],
@@ -121,7 +123,7 @@ export default function NewScanPage() {
           </CardHeader>
           <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {SCAN_MODES.map((m) => {
-              const locked = !canUseScanMode(tier, m.tier);
+              const locked = !canUseScanMode(tier, m.tier, { isDemo });
               const selected = selectedMode === m.id;
               return (
                 <button

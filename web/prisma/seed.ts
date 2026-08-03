@@ -61,6 +61,18 @@ async function main() {
     },
   });
 
+  await prisma.domain.upsert({
+    where: { orgId_name: { orgId: org.id, name: "demo.quantumshield.io" } },
+    create: {
+      orgId: org.id,
+      name: "demo.quantumshield.io",
+      verified: true,
+      securityScore: 92,
+      grade: "A",
+    },
+    update: { verified: true },
+  });
+
   console.log("Seed complete:");
   console.log(`  Demo login: ${DEMO.email} / ${DEMO.password}`);
 }
