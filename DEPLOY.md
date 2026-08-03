@@ -1,28 +1,36 @@
 # Deploy QuantumShield (Vercel)
 
-The **Next.js SaaS app lives in the `web/` folder**. The Python scanner at the repo root is optional for local dev only.
+The **Next.js SaaS app lives in the `web/` folder**.
 
-If Vercel deploys an old static/Python UI, the project **Root Directory** was not set to `web`.
-
-## Vercel — correct setup
+## Vercel — required settings
 
 1. Import: https://github.com/AbdullahYaseen01/Cyber_security
-2. **Settings → General → Root Directory → `web`** (required)
-3. **Settings → Environment Variables** (Production):
+2. **Settings → General → Root Directory → `web`** ← **MUST be set**
+3. Leave Install/Build commands **empty** (uses `web/vercel.json` automatically)
+4. **Settings → Environment Variables** (Production):
    - `DATABASE_URL` — PostgreSQL connection string
-   - `AUTH_SECRET` — min 32 characters
+   - `AUTH_SECRET` — min 32 characters (e.g. `openssl rand -base64 32`)
    - `NEXT_PUBLIC_APP_URL` — your Vercel URL (e.g. `https://your-app.vercel.app`)
-   - Stripe keys (optional for billing): `STRIPE_SECRET_KEY`, `STRIPE_*_MONTHLY`, etc.
-4. **Deployments → Redeploy** (enable “Clear build cache” if you previously deployed the wrong version)
+   - `AUTH_URL` — same as `NEXT_PUBLIC_APP_URL`
+5. **Deployments → Redeploy** → enable **Clear build cache**
 
-## Build settings (when Root Directory = `web`)
+## Build settings (auto from `web/vercel.json`)
 
 | Setting | Value |
 |---------|--------|
+| Root Directory | **`web`** |
 | Framework | Next.js |
 | Install | `npm install` |
 | Build | `prisma generate && next build` |
-| Output | `.next` (default) |
+
+## Troubleshooting failed builds
+
+| Problem | Fix |
+|---------|-----|
+| Old light-theme UI deploys | Root Directory must be `web`, not repo root |
+| Build fails after `prisma generate` | Clear build cache and redeploy |
+| `AUTH_SECRET` missing | Add env var in Vercel settings |
+| Wrong app version | Do **not** use repo-root `legacy-static/` — only `web/` |
 
 ## Demo login (after deploy)
 

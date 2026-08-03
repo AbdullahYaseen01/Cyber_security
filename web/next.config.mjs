@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: "standalone",
+  // Standalone is for Docker only — breaks Vercel deployments
+  ...(process.env.VERCEL ? {} : { output: "standalone" }),
   async redirects() {
     return [
       { source: "/cloud", destination: "/dashboard/cloud-guard", permanent: false },
