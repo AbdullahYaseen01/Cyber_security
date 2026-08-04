@@ -73,7 +73,14 @@ export function Sidebar() {
 
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto overflow-x-hidden py-3 px-2.5 space-y-1 scrollbar-thin">
-        {NAV_ITEMS.filter((item) => item.id !== "settings").map((item, index) => {
+        {NAV_ITEMS.filter((item) => {
+          if (item.id === "settings") return false;
+          // Ops Monitor: demo + org owners/admins only
+          if (item.id === "admin") {
+            return isDemo || user?.role === "OWNER" || user?.role === "ADMIN";
+          }
+          return true;
+        }).map((item, index) => {
           const locked = !canAccessModule(tier, item.id, { isDemo });
           const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
           const Icon = item.icon;
