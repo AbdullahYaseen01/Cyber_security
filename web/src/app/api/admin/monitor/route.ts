@@ -15,90 +15,87 @@ export async function GET(request: Request) {
     const dayAgo = new Date(now - 24 * 60 * 60_000);
     const weekAgo = new Date(now - 7 * 24 * 60 * 60_000);
 
-    const [
-      totalUsers,
-      totalOrgs,
-      totalScans,
-      totalFindings,
-      totalAgents,
-      agentsOnline,
-      activeSessions,
-      usersActive24h,
-      usersActive7d,
-      recentUsers,
-      orgs,
-      recentScans,
-      healthHistory,
-      openCritical,
-    ] = await Promise.all([
-      prisma.user.count(),
-      prisma.organization.count(),
-      prisma.scan.count(),
-      prisma.finding.count(),
-      prisma.agent.count(),
-      prisma.agent.count({ where: { status: "ONLINE" } }),
-      prisma.session.count({ where: { expires: { gt: new Date() } } }),
-      prisma.user.count({ where: { updatedAt: { gte: dayAgo } } }),
-      prisma.user.count({ where: { updatedAt: { gte: weekAgo } } }),
-      prisma.user.findMany({
-        orderBy: { createdAt: "desc" },
-        take: 50,
-        select: {
-          id: true,
-          email: true,
-          name: true,
-          role: true,
-          createdAt: true,
-          updatedAt: true,
-          orgs: {
-            take: 1,
-            select: {
-              role: true,
-              org: {
-                select: {
-                  id: true,
-                  name: true,
-                  slug: true,
-                  subscription: { select: { tier: true, status: true, scansUsedThisMonth: true } },
+    // Sequential / small batches — Supabase pooler uses connection_limit=1
+    const totalUsers = await prisma.user.count();
+    const totalOrgs = await prisma.organization.count();
+    const totalScans = await prisma.scan.count();
+    const totalFindings = await prisma.finding.count();
+    const totalAgents = await prisma.agent.count();
+    const agentsOnline = await prisma.agent.count({ where: { status: "ONLINE" } });
+    const activeSessions = await prisma.session.count({ where: { expires: { gt: new Date() } } });
+    const usersActive24h = await prisma.user.count({ where: { updatedAt: { gte: dayAgo } } });
+    const usersActive7d = await prisma.user.count({ where: { updatedAt: { gte: weekAgo } } });
+    const openCritical = await prisma.finding.count({
+      where: { severity: "CRITICAL", status: "OPEN" },
+    });
+
+    const recentUsers = await prisma.user.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 50,
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        createdAt: true,
+        updatedAt: true,
+        orgs: {
+          take: 1,
+          select: {
+            role: true,
+            org: {
+              select: {
+                id: true,
+                name: true,
+                slug: true,
+                subscription: {
+                  select: { tier: true, status: true, scansUsedThisMonth: true },
                 },
               },
             },
           },
-          sessions: {
-            where: { expires: { gt: new Date() } },
-            take: 1,
-            select: { expires: true },
-          },
         },
-      }),
-      prisma.organization.findMany({
-        orderBy: { createdAt: "desc" },
-        take: 30,
-        select: {
-          id: true,
-          name: true,
-          slug: true,
-          createdAt: true,
-          _count: { select: { members: true, scans: true, domains: true, agents: true } },
-          subscription: { select: { tier: true, status: true, scansUsedThisMonth: true } },
+        sessions: {
+          where: { expires: { gt: new Date() } },
+          take: 1,
+          select: { expires: true },
         },
-      }),
-      prisma.scan.findMany({
-        orderBy: { createdAt: "desc" },
-        take: 15,
-        select: {
-          id: true,
-          mode: true,
-          status: true,
-          findingsCount: true,
-          createdAt: true,
-          completedAt: true,
-          domain: { select: { name: true } },
-        },
-      }),
-      getRecentHealthHistory(40),
-      prisma.finding.count({ where: { severity: "CRITICAL", status: "OPEN" } }),
-    ]);
+      },
+    });
+
+    const orgs = await prisma.organization.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 30,
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        createdAt: true,
+        _count: { select: { members: true, scans: true, domains: true, agents: true } },
+        subscription: { select: { tier: true, status: true, scansUsedThisMonth: true } },
+      },
+    });
+
+    const recentScans = await prisma.scan.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 15,
+      select: {
+        id: true,
+        mode: true,
+        status: true,
+        findingsCount: true,
+        createdAt: true,
+        completedAt: true,
+        domain: { select: { name: true } },
+      },
+    });
+
+    let healthHistory: Awaited<ReturnType<typeof getRecentHealthHistory>> = [];
+    try {
+      healthHistory = await getRecentHealthHistory(40);
+    } catch {
+      healthHistory = [];
+    }
 
     const users = recentUsers.map((u) => ({
       id: u.id,
