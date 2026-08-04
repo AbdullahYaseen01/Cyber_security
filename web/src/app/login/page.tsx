@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -35,6 +35,19 @@ export default function LoginPage() {
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<LoginForm>({ resolver: zodResolver(loginSchema) });
+
+  useEffect(() => {
+    const error = new URLSearchParams(window.location.search).get("error");
+    if (!error) return;
+    const messages: Record<string, string> = {
+      config: "Server not configured. Add AUTH_SECRET and DATABASE_URL in Vercel project settings.",
+      database: "Database not connected. Add DATABASE_URL (Supabase) in Vercel.",
+      demo: "Demo login failed. Check Vercel env vars and redeploy.",
+    };
+    toast.error(messages[error] ?? "Login failed. Please try again.");
+    setDemoLoading(false);
+    window.history.replaceState({}, "", "/login");
+  }, []);
 
   async function completeLogin() {
     const user = await waitForSessionUser(30, 200);
