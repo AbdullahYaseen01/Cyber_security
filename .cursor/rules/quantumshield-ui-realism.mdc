@@ -1,0 +1,67 @@
+---
+description: QuantumShield UI — professional security product aesthetic, avoid generic LLM-generated look
+globs: web/src/**/*.tsx
+alwaysApply: false
+---
+
+# QuantumShield UI Realism
+
+Build UI that looks like **Datadog, Snyk, or Wiz** — not a generic AI landing page.
+
+## Visual system (use existing tokens)
+
+- Background: `#0B0F19` (`--background`), not pure black
+- Surface cards: `glass` utility or `bg-white/[0.03] border border-white/10`
+- Accent: cyan `#00F0FF` for primary actions; purple sparingly
+- Severity: CRITICAL `#FF3366`, HIGH orange, MEDIUM `#FFB800`, LOW cyan, INFO slate
+- Fonts: **Inter** for UI, **JetBrains Mono** only for scores, IDs, logs, timestamps
+- Max 1 gradient text per viewport; no rainbow hero blobs on dashboard pages
+
+## Layout patterns
+
+- **Sidebar** (`sidebar.tsx`): 260px expanded, icon-only collapsed, logout at bottom
+- **Dashboard**: dense data first — stat row, then tables/charts; welcome banner is one compact strip, not full-screen
+- **Tables**: TanStack-style — sortable columns, row hover `border-white/10`, empty states with one CTA
+- **Forms**: labels above inputs, inline Zod errors, primary button right-aligned
+- **Modals**: max-w-lg, title + description + actions; no decorative icons in corners
+
+## Motion (restraint)
+
+- Page enter: `opacity 0→1`, `y: 12→0`, 300ms max
+- Stagger children 40–60ms; no bounce on data tables
+- Scan progress: phase label + numeric %; holographic effects only on active scan page
+- Disable `animate-pulse` except CRITICAL finding badges
+
+## Copy tone
+
+- Short, operational: "3 critical findings" not "Your security posture needs attention!"
+- Button labels: "New scan", "Export PDF", "Deploy agent" — not "Get Started" on every button
+- Empty states: state fact + action ("No scans yet. Add a domain to begin.")
+
+## Components to reuse (extend, don't duplicate)
+
+- `web/src/components/ui/*` — Button, Card, Badge, Input
+- `web/src/components/layout/app-shell.tsx`, `sidebar.tsx`, `header.tsx`
+- `web/src/components/modules/module-page.tsx` for feature pages
+- `web/src/lib/constants.ts` — NAV_ITEMS, scan phases
+
+## Anti-patterns (never)
+
+- Centered hero with 3 feature cards and stock Lucide icons only
+- "Powered by AI" badges, fake testimonial carousels, neon grid backgrounds on app pages
+- Identical card grids with only icon + title + "Learn more"
+- `text-gradient` on every heading
+- Mock data arrays hardcoded in page components when API exists — use React Query + skeletons
+- Oversized rounded-3xl everything; mix `rounded-lg` (8px) for inputs, `rounded-xl` (12px) for cards
+
+## Data loading
+
+- Use `@tanstack/react-query` with skeleton placeholders matching final layout
+- Show real timestamps (`timeAgo`), real domain names from API
+- Error states: toast + retry link, not full-page illustration
+
+## Reference pages in this repo
+
+- Login: `web/src/app/login/page.tsx` — compact card, demo block, no full-bleed gradient
+- Dashboard: `web/src/app/dashboard/page.tsx` — stats + charts + findings list
+- Scanner: `web/src/app/dashboard/scanner/new/page.tsx` — mode cards with concrete numbers (checks, duration)

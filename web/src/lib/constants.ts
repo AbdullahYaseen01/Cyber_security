@@ -10,6 +10,7 @@ import {
   FileBarChart,
   Settings,
   GraduationCap,
+  Activity,
   type LucideIcon,
 } from "lucide-react";
 import type { TierId } from "./tiers";
@@ -36,6 +37,7 @@ export const NAV_ITEMS: NavItem[] = [
   { id: "darkweb", label: "Dark Web Intel", href: "/dashboard/dark-web", icon: Eye, requiredTier: "BUSINESS" },
   { id: "compliance", label: "Compliance Hub", href: "/dashboard/compliance", icon: ClipboardCheck, requiredTier: "PROFESSIONAL" },
   { id: "reports", label: "Reports Center", href: "/dashboard/reports", icon: FileBarChart, requiredTier: "PROFESSIONAL" },
+  { id: "system", label: "System Tester", href: "/dashboard/system", icon: Activity, requiredTier: "STARTER", badge: "Live" },
   { id: "settings", label: "Settings", href: "/dashboard/settings", icon: Settings, requiredTier: "STARTER" },
   { id: "academy", label: "Academy", href: "/dashboard/academy", icon: GraduationCap, requiredTier: "ENTERPRISE" },
 ];

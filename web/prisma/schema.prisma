@@ -94,6 +94,9 @@ model Organization {
   reports           Report[]
   webhooks          Webhook[]
   apiKeys           ApiKey[]
+  agentLogs         AgentLog[]
+  scanLogs          ScanLog[]
+  healthChecks      HealthCheck[]
 }
 
 model OrgMember {
@@ -294,8 +297,12 @@ model Agent {
   hostname      String
   os            String
   version       String
+  agentType     String      @default("monitor")
+  cronSchedule  String?
+  targetUrl     String?
   status        AgentStatus @default(OFFLINE)
   lastHeartbeat DateTime?
+  lastRunAt     DateTime?
   ipAddress     String?
   installToken  String      @unique @default(cuid())
   config        Json?
@@ -303,9 +310,58 @@ model Agent {
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
 
-  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  org  Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  logs AgentLog[]
 
   @@index([orgId])
+  @@index([status])
+}
+
+model AgentLog {
+  id          String   @id @default(cuid())
+  orgId       String
+  agentId     String
+  executionId String?
+  level       String
+  message     String   @db.Text
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  org   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  agent Agent        @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@index([agentId, createdAt])
+  @@index([orgId])
+}
+
+model ScanLog {
+  id        String   @id @default(cuid())
+  orgId     String
+  scanId    String
+  phase     String
+  message   String
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@index([scanId])
+  @@index([orgId])
+}
+
+model HealthCheck {
+  id          String   @id @default(cuid())
+  orgId       String?
+  serviceName String
+  status      String
+  responseMs  Int?
+  details     Json?
+  createdAt   DateTime @default(now())
+
+  org Organization? @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@index([serviceName, createdAt])
+  @@index([orgId, createdAt])
 }
 
 enum AgentStatus {

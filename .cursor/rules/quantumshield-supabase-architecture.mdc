@@ -1,0 +1,131 @@
+---
+description: QuantumShield platform architecture — Supabase-only stack, phased delivery, real scanners (not mocks)
+alwaysApply: true
+---
+
+# QuantumShield — Supabase-Only Architecture
+
+## Stack (do NOT introduce MongoDB, self-hosted Postgres, or 12 Docker microservices)
+
+| Layer | Technology |
+|-------|------------|
+| Frontend | `web/` — Next.js 15 App Router, TypeScript, Tailwind, shadcn/ui, Framer Motion, Recharts, Zustand |
+| API | Next.js Route Handlers under `web/src/app/api/` (single gateway, not separate Express services) |
+| Database | **Supabase PostgreSQL** via Prisma (`web/prisma/schema.prisma`) |
+| Auth | NextAuth v5 + Prisma adapter; demo user via `web/src/lib/demo-auth.ts` |
+| Real-time | Supabase Realtime + SSE for scan progress (`web/src/lib/scan-engine.ts`) |
+| Background jobs | Database-backed queue tables + Vercel cron OR Python worker (`core/`, `scanner.py`) |
+| File storage | Supabase Storage (reports, evidence, screenshots) |
+| Deploy | Vercel (`web/`), Root Directory = `web` |
+
+**Connection strings:**
+- `DATABASE_URL` → Supabase **transaction pooler** port **6543** (`?pgbouncer=true&connection_limit=1`)
+- `DIRECT_URL` → direct port **5432** (migrations/seed only)
+
+## Map mega-prompt “services” → this repo
+
+| Conceptual service | Implementation path |
+|--------------------|---------------------|
+| API Gateway | `web/src/middleware.ts` + `web/src/lib/api-auth.ts` |
+| Auth | `web/src/lib/auth.ts`, `web/prisma` User/Org models |
+| Deep Scanner | `web/src/lib/scan-engine.ts`, `core/*.py`, `web/src/app/api/scans/` |
+| Agent Security | `web/src/app/api/agents/`, `web/src/app/dashboard/agent-security/` |
+| API Security | `web/src/app/api/api-security/`, dashboard module |
+| Cloud Guard | `web/src/app/api/cloud-accounts/` |
+| Phishing Shield | `web/src/app/api/phishing-campaigns/` |
+| Dark Web Intel | `web/src/app/api/dark-web/` (simulated feeds OK) |
+| Compliance Hub | `web/src/app/api/compliance/` |
+| Reports | `web/src/app/api/reports/` |
+| Notifications | Supabase table `notifications` + toast (Sonner); optional Edge Function |
+| System Tester | `web/src/app/api/health/` + cron job writing to `health_checks` table |
+
+Add new tables in Prisma — never spin up a new database per feature.
+
+## Logs & events (replace MongoDB)
+
+Use Postgres tables with `Json` columns:
+
+```prisma
+model ScanLog {
+  id        String   @id @default(cuid())
+  scanId    String
+  phase     String
+  message   String
+  metadata  Json?
+  createdAt DateTime @default(now())
+  @@index([scanId])
+}
+
+model AgentLog {
+  id          String   @id @default(cuid())
+  agentId     String
+  executionId String?
+  level       String
+  message     String   @db.Text
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  @@index([agentId])
+}
+
+model HealthCheck {
+  id           String   @id @default(cuid())
+  serviceName  String
+  status       String
+  responseMs   Int?
+  details      Json?
+  createdAt    DateTime @default(now())
+  @@index([serviceName, createdAt])
+}
+```
+
+Publish scan/agent updates via Supabase Realtime on `scan:{id}` and `agent:{id}` channels.
+
+## Implementation phases (strict order)
+
+1. **Foundation** — Prisma schema, auth, org RBAC, sidebar shell (`web/src/components/layout/`)
+2. **Deep Scanner** — Real DNS/HTTP/SSL/path checks; store findings; SSE progress; no fake progress bars
+3. **Agents** — CRUD + scheduled runs (cron) + log streaming; monitor template must hit real URLs
+4. **Module APIs** — API security, cloud, phishing, compliance — each reads/writes Supabase via Prisma
+5. **System health** — `/api/health` + periodic checks persisted to `HealthCheck`
+6. **Polish** — Reports export, academy content, performance
+
+## Scanner requirements (must be real)
+
+When user runs a scan on a verified domain:
+
+1. DNS resolve + subdomain wordlist probe (`core/subdomain_enum.py` or TS equivalent)
+2. TCP connect on common ports (80, 443, 8080, 3000, 22)
+3. HTTP fetch — security headers (HSTS, CSP, X-Frame-Options)
+4. TLS cert expiry and cipher check
+5. Path fuzz (`/admin`, `/api`, `/.env`, `/backup`)
+6. Persist `Finding` rows with severity, CWE, remediation
+7. Stream phase progress to client
+
+Scan modes: LIGHTNING (fast subset), STANDARD (13 phases), MEGA (extended fuzz), SUPER (alternate engine in `core/`).
+
+## Agent requirements (must be real)
+
+- `Agent` model: type `monitor|responder|hunter|compliance`, `cronSchedule`, `config` Json
+- On run: execute typed handler (not empty mock); append `AgentLog` rows
+- Monitor agent: HTTP GET + SSL days-left check every N minutes
+- Surface logs in terminal UI (`dashboard/agent-security`)
+
+## API conventions
+
+- All routes under `web/src/app/api/` require session or API key
+- Validate with Zod; return `{ error, code }` JSON on failure
+- Org-scoped queries: always filter by `orgId` from session
+- Rate limit sensitive routes in middleware
+
+## Env vars (Supabase + Vercel)
+
+Required: `DATABASE_URL`, `DIRECT_URL`, `AUTH_SECRET`, `AUTH_URL`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_APP_URL`
+
+See `DEPLOY.md` and `web/.env.example`. Never commit `.env` or `VERCEL_ENV.txt`.
+
+## What NOT to do
+
+- Do not create `/services/api-gateway/`, `/frontend/` duplicate trees
+- Do not add MongoDB, Redis-as-primary-DB, or docker-compose for 12 Node services
+- Do not generate placeholder UIs with lorem ipsum scan results
+- Do not use generic purple-gradient-on-white “AI SaaS” layouts
