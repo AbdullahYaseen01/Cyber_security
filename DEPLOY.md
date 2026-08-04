@@ -130,10 +130,20 @@ curl -X POST https://cyber-security-ruddy.vercel.app/api/setup \
 ```bash
 cd web
 cp .env.example .env
-# For local Postgres, set DIRECT_URL same as DATABASE_URL
 npm install
-npm run db:setup
+npm run db:setup   # uses DIRECT_URL (port 5432) for schema push + seed
 npm run dev
 ```
 
 Open http://localhost:3000
+
+### Supabase connection strings (important)
+
+| Variable | Port | Use |
+|----------|------|-----|
+| `DATABASE_URL` | **6543** (transaction pooler) | Runtime queries in Next.js / Prisma Client. Add `?pgbouncer=true&connection_limit=1` |
+| `DIRECT_URL` | **5432** (direct or session pooler) | `prisma db push`, migrations, and `npm run db:setup` only |
+
+> **`.env.local` overrides `.env`.** If demo login fails locally with "Can't reach database server at `db.*.supabase.co:5432`", your `DATABASE_URL` in `.env.local` is pointing at the direct host instead of the pooler. Copy the pooler URL from `.env.example`.
+
+For local dev, set `AUTH_URL` and `NEXT_PUBLIC_APP_URL` to `http://localhost:3000` (not the Vercel production URL).

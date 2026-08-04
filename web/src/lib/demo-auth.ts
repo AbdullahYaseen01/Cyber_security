@@ -220,7 +220,12 @@ export async function ensureDemoUser() {
   }
 
   await ensureDemoDomains(membership.orgId);
-  await ensureDemoSampleData(user.id, membership.orgId);
+
+  try {
+    await ensureDemoSampleData(user.id, membership.orgId);
+  } catch (err) {
+    console.error("Demo sample data seed failed (login still proceeds):", err);
+  }
 
   return { user, membership };
 }
