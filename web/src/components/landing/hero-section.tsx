@@ -500,8 +500,12 @@ export function HeroSection() {
                   Get Started — $5/mo <ArrowRight className="w-4 h-4" />
                 </Link>
               </Button>
-              <Button variant="outline" size="lg" asChild>
-                <Link href="/login">Sign In with Demo</Link>
+              <Button
+                variant="outline"
+                size="lg"
+                onClick={() => window.location.assign("/api/auth/demo-login")}
+              >
+                Sign In with Demo
               </Button>
             </div>
           </motion.div>

@@ -31,8 +31,13 @@ export function isSupabaseConfigured(): boolean {
 }
 
 export function getAppUrl(): string {
+  const authUrl = process.env.AUTH_URL?.trim();
+  // Local dev: don't send users to production when AUTH_URL points at Vercel
+  if (process.env.NODE_ENV === "development" && authUrl?.includes("vercel.app")) {
+    return "http://localhost:3000";
+  }
   return (
-    process.env.AUTH_URL?.trim() ||
+    authUrl ||
     process.env.NEXT_PUBLIC_APP_URL?.trim() ||
     (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000")
   );

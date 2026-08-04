@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useFormStatus } from "react-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -9,7 +8,7 @@ import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Shield, Sparkles, Copy, Check } from "lucide-react";
+import { Shield, Sparkles, Copy, Check, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,7 +17,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { DEMO_CREDENTIALS } from "@/lib/demo-auth";
 import { waitForSessionUser, mapSessionToStoreUser } from "@/lib/session-client";
 import { useAuthStore } from "@/store";
-import { loginWithDemo } from "./actions";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -27,19 +25,10 @@ const loginSchema = z.object({
 
 type LoginForm = z.infer<typeof loginSchema>;
 
-function DemoLoginButton() {
-  const { pending } = useFormStatus();
-  return (
-    <Button type="submit" variant="glow" size="sm" className="flex-1" disabled={pending}>
-      <Sparkles className="w-3.5 h-3.5" />
-      {pending ? "Signing in..." : "Use Demo Account"}
-    </Button>
-  );
-}
-
 export default function LoginPage() {
   const router = useRouter();
   const setUser = useAuthStore((s) => s.setUser);
+  const [demoLoading, setDemoLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const {
     register,
@@ -87,6 +76,12 @@ export default function LoginPage() {
     }
 
     await completeLogin();
+  }
+
+  /** Full-page navigation — most reliable demo login (sets cookie server-side). */
+  function handleDemoLogin() {
+    setDemoLoading(true);
+    window.location.assign("/api/auth/demo-login");
   }
 
   function copyCredentials() {
@@ -139,10 +134,21 @@ export default function LoginPage() {
                 </div>
               </div>
               <div className="flex gap-2">
-                {/* Server action — reliable login without client-side signIn race */}
-                <form action={loginWithDemo} className="flex-1">
-                  <DemoLoginButton />
-                </form>
+                <Button
+                  type="button"
+                  variant="glow"
+                  size="sm"
+                  className="flex-1"
+                  onClick={handleDemoLogin}
+                  disabled={demoLoading || isSubmitting}
+                >
+                  {demoLoading ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Sparkles className="w-3.5 h-3.5" />
+                  )}
+                  {demoLoading ? "Signing in..." : "Use Demo Account"}
+                </Button>
                 <Button type="button" variant="secondary" size="sm" onClick={copyCredentials}>
                   {copied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
                 </Button>
@@ -189,7 +195,7 @@ export default function LoginPage() {
                 )}
               </div>
 
-              <Button type="submit" variant="secondary" className="w-full" disabled={isSubmitting}>
+              <Button type="submit" variant="secondary" className="w-full" disabled={isSubmitting || demoLoading}>
                 {isSubmitting ? "Signing in..." : "Sign In"}
               </Button>
             </form>
