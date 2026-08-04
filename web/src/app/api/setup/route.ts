@@ -28,9 +28,14 @@ export async function POST(request: Request) {
   }
 
   try {
+    // Prefer pooler when direct :5432 is unreachable (common on IPv6-only / restricted networks)
+    const dbUrl = process.env.DATABASE_URL;
     execSync("npx prisma db push --accept-data-loss", {
       stdio: "pipe",
-      env: process.env,
+      env: {
+        ...process.env,
+        ...(dbUrl ? { DIRECT_URL: dbUrl } : {}),
+      },
     });
     const { user, membership } = await ensureDemoUser();
 
