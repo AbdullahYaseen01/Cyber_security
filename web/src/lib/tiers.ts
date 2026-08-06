@@ -1,4 +1,4 @@
-export type TierId = "STARTER" | "PROFESSIONAL" | "BUSINESS" | "ENTERPRISE";
+export type TierId = "FREE" | "STARTER" | "PROFESSIONAL" | "BUSINESS" | "ENTERPRISE";
 export type BillingCycle = "monthly" | "quarterly" | "annual";
 
 export interface TierConfig {
@@ -14,29 +14,45 @@ export interface TierConfig {
   apiAccess: boolean;
   teamSeats: number | "unlimited";
   badge?: string;
+  /** Skip Stripe — activate immediately */
+  isFree?: boolean;
 }
 
 export const TIERS: Record<TierId, TierConfig> = {
+  FREE: {
+    id: "FREE",
+    name: "Free",
+    monthlyPrice: 0,
+    quarterlyPrice: 0,
+    annualPrice: 0,
+    domains: 1,
+    scansPerMonth: 1,
+    modules: ["dashboard", "scanner"],
+    scanModes: ["lightning"],
+    apiAccess: false,
+    teamSeats: 1,
+    badge: "Free forever",
+    isFree: true,
+  },
   STARTER: {
     id: "STARTER",
     name: "Starter",
-    monthlyPrice: 5,
-    quarterlyPrice: 14,
-    annualPrice: 48,
+    monthlyPrice: 99,
+    quarterlyPrice: 267,
+    annualPrice: 950,
     domains: 1,
     scansPerMonth: 10,
     modules: ["dashboard", "scanner", "system", "admin"],
     scanModes: ["lightning"],
     apiAccess: false,
     teamSeats: 1,
-    badge: "Most Affordable",
   },
   PROFESSIONAL: {
     id: "PROFESSIONAL",
     name: "Professional",
-    monthlyPrice: 39,
-    quarterlyPrice: 105,
-    annualPrice: 374,
+    monthlyPrice: 199,
+    quarterlyPrice: 537,
+    annualPrice: 1910,
     domains: 5,
     scansPerMonth: 100,
     modules: ["dashboard", "scanner", "api", "reports", "compliance", "system", "admin"],
@@ -47,9 +63,9 @@ export const TIERS: Record<TierId, TierConfig> = {
   BUSINESS: {
     id: "BUSINESS",
     name: "Business",
-    monthlyPrice: 129,
-    quarterlyPrice: 348,
-    annualPrice: 1238,
+    monthlyPrice: 399,
+    quarterlyPrice: 1077,
+    annualPrice: 3830,
     domains: 25,
     scansPerMonth: 500,
     modules: [
@@ -73,9 +89,9 @@ export const TIERS: Record<TierId, TierConfig> = {
   ENTERPRISE: {
     id: "ENTERPRISE",
     name: "Enterprise",
-    monthlyPrice: 399,
-    quarterlyPrice: 1077,
-    annualPrice: 3830,
+    monthlyPrice: 999,
+    quarterlyPrice: 2697,
+    annualPrice: 9590,
     domains: "unlimited",
     scansPerMonth: "unlimited",
     modules: [
@@ -99,8 +115,8 @@ export const TIERS: Record<TierId, TierConfig> = {
 };
 
 export const MODULE_TIER_REQUIREMENTS: Record<string, TierId> = {
-  dashboard: "STARTER",
-  scanner: "STARTER",
+  dashboard: "FREE",
+  scanner: "FREE",
   system: "STARTER",
   admin: "STARTER",
   api: "PROFESSIONAL",
@@ -111,10 +127,10 @@ export const MODULE_TIER_REQUIREMENTS: Record<string, TierId> = {
   darkweb: "BUSINESS",
   compliance: "PROFESSIONAL",
   academy: "ENTERPRISE",
-  settings: "STARTER",
+  settings: "FREE",
 };
 
-const TIER_ORDER: TierId[] = ["STARTER", "PROFESSIONAL", "BUSINESS", "ENTERPRISE"];
+const TIER_ORDER: TierId[] = ["FREE", "STARTER", "PROFESSIONAL", "BUSINESS", "ENTERPRISE"];
 
 export function tierMeetsRequirement(userTier: TierId, requiredTier: TierId): boolean {
   return TIER_ORDER.indexOf(userTier) >= TIER_ORDER.indexOf(requiredTier);
@@ -140,7 +156,7 @@ export function canUseScanMode(
 }
 
 export function getTierLimits(tier: TierId) {
-  const config = TIERS[tier];
+  const config = TIERS[tier] ?? TIERS.FREE;
   return {
     domains: config.domains === "unlimited" ? 999999 : config.domains,
     scansPerMonth: config.scansPerMonth === "unlimited" ? 999999 : config.scansPerMonth,
@@ -148,14 +164,13 @@ export function getTierLimits(tier: TierId) {
   };
 }
 
-/** Full module list shown on pricing cards */
 export const PRICING_MODULES = [
   { id: "dashboard", label: "Dashboard" },
-  { id: "scanner", label: "Deep Scanner" },
+  { id: "scanner", label: "Deep Scanner + QuantumStrike AI" },
   { id: "api", label: "API Security" },
-  { id: "agents", label: "Agent Security" },
+  { id: "agents", label: "Agent Security + Identity Control" },
   { id: "cloud", label: "Cloud Guard" },
-  { id: "phishing", label: "Phishing Shield" },
+  { id: "phishing", label: "Phishing Shield + AI Defense" },
   { id: "darkweb", label: "Dark Web Intel" },
   { id: "compliance", label: "Compliance Hub" },
   { id: "reports", label: "Reports Center" },
@@ -180,7 +195,7 @@ export function getPricingFeatures(tier: TierConfig) {
       included: true,
     },
     {
-      label: `${tier.scansPerMonth === "unlimited" ? "Unlimited" : tier.scansPerMonth} scans/mo`,
+      label: `${tier.scansPerMonth === "unlimited" ? "Unlimited" : tier.scansPerMonth} scan${tier.scansPerMonth === 1 ? "" : "s"}/mo`,
       included: true,
     },
     {
@@ -204,6 +219,7 @@ export function getPricingFeatures(tier: TierConfig) {
 }
 
 export function getTierMonthlyEquivalent(tier: TierConfig, cycle: BillingCycle): number {
+  if (tier.isFree || tier.monthlyPrice === 0) return 0;
   switch (cycle) {
     case "annual":
       return tier.annualPrice / 12;
@@ -215,6 +231,7 @@ export function getTierMonthlyEquivalent(tier: TierConfig, cycle: BillingCycle):
 }
 
 export function getTierBillingTotal(tier: TierConfig, cycle: BillingCycle): number {
+  if (tier.isFree || tier.monthlyPrice === 0) return 0;
   switch (cycle) {
     case "annual":
       return tier.annualPrice;
@@ -226,6 +243,7 @@ export function getTierBillingTotal(tier: TierConfig, cycle: BillingCycle): numb
 }
 
 export function getBillingBilledLabel(tier: TierConfig, cycle: BillingCycle): string | null {
+  if (tier.isFree || tier.monthlyPrice === 0) return "No credit card required";
   switch (cycle) {
     case "annual":
       return `billed $${tier.annualPrice}/year`;
@@ -235,3 +253,6 @@ export function getBillingBilledLabel(tier: TierConfig, cycle: BillingCycle): st
       return null;
   }
 }
+
+/** Paid plans for Stripe checkout (excludes FREE). */
+export const PAID_TIERS = (Object.keys(TIERS) as TierId[]).filter((id) => !TIERS[id].isFree);

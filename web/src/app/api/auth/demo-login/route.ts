@@ -1,14 +1,25 @@
 import { NextResponse } from "next/server";
 import { AuthError } from "next-auth";
 import { signIn } from "@/lib/auth";
-import { ensureDemoUser, DEMO_CREDENTIALS } from "@/lib/demo-auth";
+import { ensureDemoUser } from "@/lib/demo-auth";
+import {
+  ensurePortalUser,
+  PORTAL_ACCOUNTS,
+  type PortalId,
+} from "@/lib/portal-auth";
 import { getConfigStatus } from "@/lib/env";
 import { getRequestOrigin } from "@/lib/request-origin";
 
 export const runtime = "nodejs";
 
-function loginRedirect(origin: string, error: string) {
-  return NextResponse.redirect(new URL(`/login?error=${error}`, origin));
+function isPortalId(value: string | null): value is PortalId {
+  return value === "client" || value === "admin" || value === "tester";
+}
+
+function loginRedirect(origin: string, error: string, portal: PortalId) {
+  const path =
+    portal === "admin" ? "/admin/login" : portal === "tester" ? "/tester/login" : "/login";
+  return NextResponse.redirect(new URL(`${path}?error=${error}`, origin));
 }
 
 function formatError(err: unknown): string {
@@ -32,54 +43,62 @@ function isDatabaseConnectionError(err: unknown): boolean {
   );
 }
 
-/** One-click demo login — session cookie + redirect on the same host. */
+/** One-click portal login — session cookie + redirect on the same host. */
 export async function GET(request: Request) {
   const origin = getRequestOrigin(request);
+  const url = new URL(request.url);
+  const portalParam = url.searchParams.get("portal");
+  const portal: PortalId = isPortalId(portalParam) ? portalParam : "client";
+  const account = PORTAL_ACCOUNTS[portal];
   const config = getConfigStatus();
 
   if (!config.authSecret) {
-    console.error("Demo login: AUTH_SECRET not configured");
-    return loginRedirect(origin, "config");
+    console.error("Portal login: AUTH_SECRET not configured");
+    return loginRedirect(origin, "config", portal);
   }
 
   if (!config.database) {
-    console.error("Demo login: DATABASE_URL not configured");
-    return loginRedirect(origin, "database");
+    console.error("Portal login: DATABASE_URL not configured");
+    return loginRedirect(origin, "database", portal);
   }
 
   try {
     try {
-      await ensureDemoUser();
+      if (portal === "client") {
+        await ensureDemoUser();
+      } else {
+        await ensurePortalUser(portal);
+      }
     } catch (err) {
-      console.error("Demo login ensureDemoUser failed:", formatError(err));
+      console.error("Portal login ensure failed:", formatError(err));
       if (isDatabaseConnectionError(err)) {
-        return loginRedirect(origin, "database");
+        return loginRedirect(origin, "database", portal);
       }
       throw err;
     }
 
     const result = await signIn("credentials", {
-      email: DEMO_CREDENTIALS.email,
-      password: DEMO_CREDENTIALS.password,
+      email: account.email,
+      password: account.password,
       redirect: false,
     });
 
     if (result && typeof result === "object" && "error" in result && result.error) {
-      console.error("Demo signIn error:", result.error);
-      return loginRedirect(origin, "demo");
+      console.error("Portal signIn error:", result.error);
+      return loginRedirect(origin, "demo", portal);
     }
 
-    return NextResponse.redirect(new URL("/dashboard", origin));
+    return NextResponse.redirect(new URL(account.home, origin));
   } catch (err) {
     if (err instanceof AuthError) {
-      console.error("Demo login AuthError:", err.type, err.message);
+      console.error("Portal login AuthError:", err.type, err.message);
       const isConfig = String(err.type).toLowerCase().includes("configuration");
-      return loginRedirect(origin, isConfig ? "config" : "demo");
+      return loginRedirect(origin, isConfig ? "config" : "demo", portal);
     }
-    console.error("Demo login route error:", formatError(err));
+    console.error("Portal login route error:", formatError(err));
     if (isDatabaseConnectionError(err)) {
-      return loginRedirect(origin, "database");
+      return loginRedirect(origin, "database", portal);
     }
-    return loginRedirect(origin, "demo");
+    return loginRedirect(origin, "demo", portal);
   }
 }

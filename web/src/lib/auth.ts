@@ -8,7 +8,8 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { getAuthSecret, isDatabaseConfigured } from "@/lib/env";
 import { authConfig, type SessionUser } from "./auth.config";
-import { ensureDemoUser, isDemoLogin } from "@/lib/demo-auth";
+import { ensureDemoUser } from "@/lib/demo-auth";
+import { ensurePortalUser, isPortalLogin, touchLastLogin } from "@/lib/portal-auth";
 
 const credentialsSchema = z.object({
   email: z.string().email(),
@@ -55,18 +56,26 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const parsed = credentialsSchema.safeParse(credentials);
         if (!parsed.success) return null;
 
-        if (isDemoLogin(parsed.data.email, parsed.data.password)) {
+        const portal = isPortalLogin(parsed.data.email, parsed.data.password);
+        if (portal) {
           if (!isDatabaseConfigured()) {
             throw new Error("Database not configured. Set DATABASE_URL in Vercel.");
           }
-          const { user, membership } = await ensureDemoUser();
+          const resolved =
+            portal.portal === "client"
+              ? await ensureDemoUser()
+              : await ensurePortalUser(portal.portal);
+
+          touchLastLogin(resolved.user.id);
+
           return {
-            id: user.id,
-            email: user.email,
-            name: user.name,
-            image: user.image,
-            orgId: membership.orgId,
-            role: membership.role,
+            id: resolved.user.id,
+            email: resolved.user.email,
+            name: resolved.user.name,
+            image: resolved.user.image,
+            orgId: resolved.membership.orgId,
+            role: resolved.membership.role,
+            platformRole: portal.platformRole,
             tier: "ENTERPRISE",
             subscriptionStatus: "ACTIVE",
             isDemo: true,
@@ -75,8 +84,25 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         const user = await prisma.user.findUnique({
           where: { email: parsed.data.email },
-          include: {
-            orgs: { include: { org: { include: { subscription: true } } } },
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            image: true,
+            password: true,
+            platformRole: true,
+            approvalStatus: true,
+            orgs: {
+              take: 1,
+              orderBy: { joinedAt: "asc" },
+              select: {
+                orgId: true,
+                role: true,
+                org: {
+                  select: { subscription: { select: { tier: true, status: true } } },
+                },
+              },
+            },
           },
         });
 
@@ -84,6 +110,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         const valid = await bcrypt.compare(parsed.data.password, user.password);
         if (!valid) return null;
+
+        if (user.approvalStatus === "PENDING") {
+          throw new Error("Your account is awaiting administrator approval.");
+        }
+        if (user.approvalStatus === "SUSPENDED") {
+          throw new Error("This account has been suspended. Contact your administrator.");
+        }
+
+        touchLastLogin(user.id);
 
         const membership = user.orgs[0];
         return {
@@ -93,6 +128,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           image: user.image,
           orgId: membership?.orgId ?? null,
           role: membership?.role ?? "VIEWER",
+          platformRole: user.platformRole ?? "CLIENT",
           tier: membership?.org.subscription?.tier ?? "STARTER",
           subscriptionStatus: membership?.org.subscription?.status ?? "INCOMPLETE",
         };
@@ -106,6 +142,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.sub = user.id;
         token.orgId = (user as { orgId?: string }).orgId ?? null;
         token.role = (user as { role?: string }).role ?? "VIEWER";
+        token.platformRole = (user as { platformRole?: string }).platformRole ?? "CLIENT";
         token.tier = (user as { tier?: string }).tier ?? "STARTER";
         token.subscriptionStatus =
           (user as { subscriptionStatus?: string }).subscriptionStatus ?? "INCOMPLETE";
@@ -144,6 +181,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.id = token.sub as string;
         (session.user as SessionUser).orgId = (token.orgId as string) ?? null;
         (session.user as SessionUser).role = (token.role as string) ?? "VIEWER";
+        (session.user as SessionUser).platformRole = (token.platformRole as string) ?? "CLIENT";
         (session.user as SessionUser).tier = (token.tier as string) ?? "STARTER";
         (session.user as SessionUser).subscriptionStatus =
           (token.subscriptionStatus as string) ?? "INCOMPLETE";

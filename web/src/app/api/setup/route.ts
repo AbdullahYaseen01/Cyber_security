@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { execSync } from "child_process";
 import { getConfigStatus } from "@/lib/env";
 import { ensureDemoUser } from "@/lib/demo-auth";
+import { ensurePortalUser } from "@/lib/portal-auth";
 
 export const runtime = "nodejs";
 
@@ -37,13 +38,21 @@ export async function POST(request: Request) {
         ...(dbUrl ? { DIRECT_URL: dbUrl } : {}),
       },
     });
-    const { user, membership } = await ensureDemoUser();
+    const [client, admin, tester] = await Promise.all([
+      ensureDemoUser(),
+      ensurePortalUser("admin"),
+      ensurePortalUser("tester"),
+    ]);
 
     return NextResponse.json({
       ok: true,
-      message: "Database schema pushed and demo user ready",
-      demoEmail: user.email,
-      orgId: membership.orgId,
+      message: "Database schema pushed and portal accounts ready",
+      portals: {
+        client: client.user.email,
+        admin: admin.user.email,
+        tester: tester.user.email,
+      },
+      orgId: client.membership.orgId,
     });
   } catch (err) {
     console.error("Setup failed:", err);

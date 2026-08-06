@@ -1,8 +1,8 @@
 import { auth } from "@/lib/auth";
-import { isDemoUserEmail } from "@/lib/demo-auth";
+import { portalAccountFor } from "@/lib/portal-accounts";
 import { ApiError } from "@/lib/api-auth";
 
-/** Platform ops access: demo user, OWNER/ADMIN role, or Bearer SETUP_SECRET/ADMIN_SECRET. */
+/** Platform ops access: platformRole ADMIN, admin portal email, allow-list, or Bearer secret. */
 export async function requirePlatformAdmin(request?: Request) {
   const secret =
     process.env.ADMIN_SECRET?.trim() ||
@@ -23,16 +23,16 @@ export async function requirePlatformAdmin(request?: Request) {
   }
 
   const email = session.user.email ?? "";
-  const role = session.user.role ?? "";
+  const platformRole = session.user.platformRole ?? "CLIENT";
   const allowList = (process.env.ADMIN_EMAILS ?? "")
     .split(",")
     .map((e) => e.trim().toLowerCase())
     .filter(Boolean);
 
+  const portal = portalAccountFor(email);
   const allowed =
-    isDemoUserEmail(email) ||
-    role === "OWNER" ||
-    role === "ADMIN" ||
+    platformRole === "ADMIN" ||
+    portal?.platformRole === "ADMIN" ||
     allowList.includes(email.toLowerCase());
 
   if (!allowed) {
@@ -40,4 +40,27 @@ export async function requirePlatformAdmin(request?: Request) {
   }
 
   return { mode: "session" as const, email, userId: session.user.id };
+}
+
+export async function requireTesterOrAdmin() {
+  const session = await auth();
+  if (!session?.user?.id) {
+    throw new ApiError("Unauthorized", 401);
+  }
+
+  const email = session.user.email ?? "";
+  const platformRole = session.user.platformRole ?? "CLIENT";
+  const portal = portalAccountFor(email);
+
+  const allowed =
+    platformRole === "TESTER" ||
+    platformRole === "ADMIN" ||
+    portal?.platformRole === "TESTER" ||
+    portal?.platformRole === "ADMIN";
+
+  if (!allowed) {
+    throw new ApiError("Forbidden — tester or admin only", 403);
+  }
+
+  return { email, userId: session.user.id, platformRole };
 }

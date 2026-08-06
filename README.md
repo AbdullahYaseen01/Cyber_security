@@ -3,7 +3,7 @@
 > **Deploy the NEW app (dark theme on localhost:3000):** set Vercel **Root Directory** to `web`.  
 > The old light-theme UI in `legacy-static/` is not the product — use the Next.js app in `web/`.
 
-World-class subscription-only cybersecurity platform built around a flagship **Deep Web Vulnerability Scanner** with 9 integrated security modules.
+World-class cybersecurity **operating system**: **QuantumStrike AI** (autonomous pentest), flagship **Deep Scanner**, Identity Control Plane, Adaptive AI Defense, plus API, cloud, phishing, dark web, compliance, and reports — positioned to outcompete Scanifier, Veiliux, Opal, Adaptive, and single-purpose vendors.
 
 ## Deploy on Vercel
 
@@ -19,7 +19,7 @@ See **[DEPLOY.md](./DEPLOY.md)** for full steps and environment variables.
 | **Frontend** | Next.js 15, TypeScript, Tailwind, shadcn/ui, Framer Motion |
 | **Scanner API** | Python FastAPI (optional local), SSE threat stream |
 | **Platform DB** | PostgreSQL (Prisma) |
-| **Billing** | Stripe (Starter from $5/mo) |
+| **Billing** | Stripe (Starter from $99/mo) |
 
 ## Quick Start (Local Dev)
 
@@ -72,10 +72,10 @@ docker compose up --build
 
 | Tier | Price | Domains | Scans/mo |
 |------|-------|---------|----------|
-| Starter | $5/mo | 1 | 10 |
-| Professional | $39/mo | 5 | 100 |
-| Business | $129/mo | 25 | 500 |
-| Enterprise | $399/mo | Unlimited | Unlimited |
+| Starter | $99/mo | 1 | 10 |
+| Professional | $199/mo | 5 | 100 |
+| Business | $399/mo | 25 | 500 |
+| Enterprise | $999/mo | Unlimited | Unlimited |
 
 **No free tier.** 7-day trial on all plans (credit card required).
 

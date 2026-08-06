@@ -41,15 +41,18 @@ model Session {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  name          String?
-  image         String?
-  emailVerified DateTime?
-  password      String?
-  role          UserRole  @default(ANALYST)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id             String    @id @default(cuid())
+  email          String    @unique
+  name           String?
+  image          String?
+  emailVerified  DateTime?
+  password       String?
+  role           UserRole  @default(ANALYST)
+  platformRole   String    @default("CLIENT")
+  approvalStatus String    @default("APPROVED")
+  lastLoginAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   accounts      Account[]
   sessions      Session[]
@@ -60,6 +63,73 @@ model User {
   reports       Report[]
   apiKeys       ApiKey[]
   notifications Notification[]
+  payments      Payment[]
+  auditLogs     AuditLog[]
+  testRuns      TestRun[]
+
+  @@index([platformRole])
+  @@index([approvalStatus])
+}
+
+model Payment {
+  id          String    @id @default(cuid())
+  orgId       String?
+  userId      String
+  amount      Int
+  currency    String    @default("USD")
+  tier        String
+  cycle       String    @default("monthly")
+  method      String    @default("manual")
+  reference   String?
+  status      String    @default("PENDING")
+  notes       String?
+  reviewedBy  String?
+  reviewedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  org  Organization? @relation(fields: [orgId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@index([userId])
+  @@index([orgId])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  actorEmail String
+  action     String
+  targetType String?
+  targetId   String?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([action])
+}
+
+model TestRun {
+  id         String    @id @default(cuid())
+  name       String
+  suite      String    @default("system")
+  status     String    @default("RUNNING")
+  passed     Int       @default(0)
+  failed     Int       @default(0)
+  skipped    Int       @default(0)
+  durationMs Int?
+  results    Json?
+  startedBy  String?
+  createdAt  DateTime  @default(now())
+  completedAt DateTime?
+
+  user User? @relation(fields: [startedBy], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([suite, createdAt])
 }
 
 enum UserRole {
@@ -97,6 +167,7 @@ model Organization {
   agentLogs         AgentLog[]
   scanLogs          ScanLog[]
   healthChecks      HealthCheck[]
+  payments          Payment[]
 }
 
 model OrgMember {
@@ -140,6 +211,7 @@ enum SubscriptionStatus {
 }
 
 enum SubscriptionTier {
+  FREE
   STARTER
   PROFESSIONAL
   BUSINESS

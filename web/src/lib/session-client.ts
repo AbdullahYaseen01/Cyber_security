@@ -7,6 +7,7 @@ export type SessionUserPayload = {
   orgId: string | null;
   orgName: string | null;
   role: string;
+  platformRole: string;
   tier: string;
   subscriptionStatus: string;
   scansUsed: number;
@@ -23,9 +24,9 @@ export async function fetchSessionUser(): Promise<SessionUserPayload | null> {
   return data.user ?? null;
 }
 
-/** Poll until NextAuth session is available (fixes demo button race). */
+/** Short retry loop covering the gap between set-cookie and the next request. */
 export async function waitForSessionUser(
-  maxAttempts = 15,
+  maxAttempts = 6,
   delayMs = 120
 ): Promise<SessionUserPayload | null> {
   for (let i = 0; i < maxAttempts; i++) {
@@ -45,10 +46,17 @@ export function mapSessionToStoreUser(user: SessionUserPayload | null) {
     orgId: user.orgId,
     orgName: user.orgName,
     role: user.role,
+    platformRole: user.platformRole ?? "CLIENT",
     tier: user.tier as TierId,
     subscriptionStatus: user.subscriptionStatus,
     scansUsed: user.scansUsed,
     scansLimit: user.scansLimit,
     isDemo: user.isDemo,
   };
+}
+
+export function homeForRole(role: string | null | undefined): string {
+  if (role === "ADMIN") return "/admin";
+  if (role === "TESTER") return "/tester";
+  return "/dashboard";
 }

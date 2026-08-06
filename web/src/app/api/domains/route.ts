@@ -47,7 +47,8 @@ export async function POST(req: NextRequest) {
       data: {
         orgId: org.orgId,
         name,
-        verified: isDemo,
+        // Domains are scan-ready immediately — verification not required.
+        verified: true,
       },
     });
 

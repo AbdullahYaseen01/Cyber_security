@@ -6,6 +6,7 @@ declare module "next-auth" {
       id: string;
       orgId: string | null;
       role: string;
+      platformRole: string;
       tier: string;
       subscriptionStatus: string;
       isDemo?: boolean;
@@ -15,6 +16,7 @@ declare module "next-auth" {
   interface User {
     orgId?: string | null;
     role?: string;
+    platformRole?: string;
     tier?: string;
     subscriptionStatus?: string;
     isDemo?: boolean;
@@ -25,6 +27,7 @@ declare module "next-auth/jwt" {
   interface JWT {
     orgId?: string | null;
     role?: string;
+    platformRole?: string;
     tier?: string;
     subscriptionStatus?: string;
     isDemo?: boolean;

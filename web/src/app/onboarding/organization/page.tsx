@@ -90,7 +90,7 @@ export default function OrganizationOnboardingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0B0F19] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}

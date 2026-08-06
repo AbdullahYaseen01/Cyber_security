@@ -1,11 +1,11 @@
 import { cn } from "@/lib/utils";
 
 const severityStyles = {
-  CRITICAL: "bg-red-500/20 text-red-400 border-red-500/40 animate-pulse",
-  HIGH: "bg-orange-500/20 text-orange-400 border-orange-500/40",
-  MEDIUM: "bg-amber-500/20 text-amber-400 border-amber-500/40",
-  LOW: "bg-blue-500/20 text-blue-400 border-blue-500/40",
-  INFO: "bg-slate-500/20 text-slate-400 border-slate-500/40",
+  CRITICAL: "bg-rose-500/15 text-rose-300 border-rose-400/30",
+  HIGH: "bg-orange-500/15 text-orange-300 border-orange-400/30",
+  MEDIUM: "bg-amber-500/15 text-amber-200 border-amber-400/30",
+  LOW: "bg-sky-500/15 text-sky-300 border-sky-400/30",
+  INFO: "bg-slate-500/15 text-slate-300 border-slate-400/30",
 } as const;
 
 export type Severity = keyof typeof severityStyles;
@@ -23,7 +23,7 @@ export function Badge({
     <span
       className={cn(
         "inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-mono font-medium uppercase tracking-wider",
-        severity ? severityStyles[severity] : "bg-white/10 text-slate-300 border-white/10",
+        severity ? severityStyles[severity] : "bg-white/5 text-slate-300 border-white/10",
         className
       )}
     >
@@ -34,13 +34,14 @@ export function Badge({
 
 export function TierBadge({ tier }: { tier: string }) {
   const colors: Record<string, string> = {
-    STARTER: "text-cyan-400 border-cyan-500/30",
-    PROFESSIONAL: "text-purple-400 border-purple-500/30",
-    BUSINESS: "text-amber-400 border-amber-500/30",
-    ENTERPRISE: "text-green-400 border-green-500/30",
+    FREE: "text-emerald-300 border-emerald-400/30 bg-emerald-400/10",
+    STARTER: "text-cyan-300 border-cyan-400/30 bg-cyan-400/10",
+    PROFESSIONAL: "text-violet-300 border-violet-400/30 bg-violet-400/10",
+    BUSINESS: "text-amber-200 border-amber-400/30 bg-amber-400/10",
+    ENTERPRISE: "text-emerald-300 border-emerald-400/30 bg-emerald-400/10",
   };
   return (
-    <span className={cn("text-xs font-mono border rounded px-2 py-0.5", colors[tier] ?? colors.STARTER)}>
+    <span className={cn("text-[10px] font-mono border rounded px-1.5 py-0.5", colors[tier] ?? colors.STARTER)}>
       {tier}
     </span>
   );

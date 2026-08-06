@@ -459,6 +459,14 @@ export async function startScanSimulation(scanId: string): Promise<void> {
 
     await setProgress(scanId, 100, "Complete", 13);
     await broadcastScanEvent(scanId, { type: "complete", scanId });
+
+    // Persist report + email (if the user provided an address).
+    try {
+      const { deliverScanReport } = await import("@/lib/scan-report");
+      await deliverScanReport(scanId);
+    } catch (reportErr) {
+      console.error("Scan report delivery failed:", reportErr);
+    }
   } catch (err) {
     console.error("Scan engine error:", err);
     await prisma.scan.update({

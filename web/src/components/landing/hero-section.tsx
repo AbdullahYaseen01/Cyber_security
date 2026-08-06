@@ -3,179 +3,66 @@
 import Link from "next/link";
 import { motion } from "framer-motion";
 import {
-  Shield, ArrowRight, Radar, Target, Lock,
-  Globe, Brain, Radio, Sparkles, Wand2,
+  ArrowRight,
+  Check,
+  Minus,
+  Sparkles,
+  Shield,
+  Zap,
+  Lock,
+  ChevronDown,
 } from "lucide-react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ParticleField } from "@/components/landing/particle-field";
-import { ShimmerText, PulseRing } from "@/components/landing/animated-text";
+import { ShimmerText } from "@/components/landing/animated-text";
+import { SiteNav } from "@/components/landing/site-nav";
+import { SiteFooter } from "@/components/landing/site-footer";
+import { LiveConsole } from "@/components/landing/live-console";
 import {
   LANDING_FEATURED_MODULES,
   LANDING_SECONDARY_MODULES,
+  LANDING_STATS,
+  LANDING_HOW_IT_WORKS,
+  LANDING_COMPARISON,
+  LANDING_FAQ,
+  PRODUCT_SUITE,
   type LandingModule,
 } from "@/lib/constants";
 
-const MARKETING_HIGHLIGHTS = [
-  { emoji: "🔍", label: "1M+ Fuzzing", accent: "border-cyan-500/30 bg-cyan-500/10" },
-  { emoji: "📡", label: "Live Threat Stream", accent: "border-purple-500/30 bg-purple-500/10" },
-  { emoji: "🤖", label: "AI Exploitation", accent: "border-violet-500/30 bg-violet-500/10" },
-  { emoji: "💀", label: "21 Elite Techniques", accent: "border-red-500/30 bg-red-500/10" },
-  { emoji: "☁️", label: "Cloud CSPM", accent: "border-sky-500/30 bg-sky-500/10" },
-  { emoji: "📋", label: "11 Report Standard", accent: "border-amber-500/30 bg-amber-500/10" },
-];
-
-const HERO_FEATURES = [
-  {
-    icon: Radar,
-    title: "18-Phase Deep Scanner",
-    desc: "1 million+ parallel checks — OSINT recon, port scanning, remote service analysis, fuzzing, and exploit verification.",
-    color: "from-cyan-500/20 to-cyan-500/5",
-    border: "hover:border-cyan-500/40",
-  },
-  {
-    icon: Radio,
-    title: "Live Threat Feed",
-    desc: "Real-time SSE stream with holographic progress — watch vulnerabilities surface as they're found.",
-    color: "from-purple-500/20 to-purple-500/5",
-    border: "hover:border-purple-500/40",
-  },
-  {
-    icon: Brain,
-    title: "AI Vulnerability Inference",
-    desc: "Pattern learning from 843+ historical disclosures. Smart prioritization before active exploitation.",
-    color: "from-amber-500/20 to-amber-500/5",
-    border: "hover:border-amber-500/40",
-  },
-  {
-    icon: Target,
-    title: "Exploit Verification",
-    desc: "Every finding re-probed with confidence scoring. Bug-bounty-ready reports at 90%+ certainty.",
-    color: "from-red-500/20 to-red-500/5",
-    border: "hover:border-red-500/40",
-  },
-  {
-    icon: Globe,
-    title: "OSINT & Service Intel",
-    desc: "WHOIS, DNS zone transfers, email harvesting, Samba/FTP/SMB remote exploit detection.",
-    color: "from-green-500/20 to-green-500/5",
-    border: "hover:border-green-500/40",
-  },
-  {
-    icon: Wand2,
-    title: "LLM-Safe Vibe Coding",
-    desc: "Scan AI-generated code for hardcoded secrets, SQLi, XSS, and auth bypass patterns.",
-    color: "from-amber-500/20 to-amber-500/5",
-    border: "hover:border-amber-500/40",
-  },
-];
-
 const fadeUp = {
-  hidden: { opacity: 0, y: 30 },
+  hidden: { opacity: 0, y: 24 },
   visible: (i: number) => ({
     opacity: 1,
     y: 0,
-    transition: { delay: i * 0.08, duration: 0.55, ease: "easeOut" as const },
+    transition: { delay: i * 0.06, duration: 0.45, ease: "easeOut" as const },
   }),
 };
 
-function MarketingHighlights() {
+function CmpCell({ value }: { value: boolean | "partial" }) {
+  if (value === true) {
+    return (
+      <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-400">
+        <Check className="h-3.5 w-3.5" />
+      </span>
+    );
+  }
+  if (value === "partial") {
+    return (
+      <span className="inline-flex h-7 items-center rounded-full bg-amber-500/10 px-2 font-mono text-[10px] font-semibold text-amber-300">
+        partial
+      </span>
+    );
+  }
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{ duration: 0.6 }}
-      className="mb-20"
-    >
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4">
-        {MARKETING_HIGHLIGHTS.map((item, i) => (
-          <motion.div
-            key={item.label}
-            custom={i}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            variants={fadeUp}
-            whileHover={{ y: -4, scale: 1.03 }}
-            className={`group relative flex flex-col items-center justify-center text-center p-4 md:p-5 rounded-2xl border backdrop-blur-sm transition-all duration-300 hover:shadow-[0_0_30px_-5px_rgba(0,240,255,0.3)] ${item.accent}`}
-          >
-            <span className="text-2xl md:text-3xl mb-2 group-hover:scale-110 transition-transform drop-shadow-[0_0_12px_rgba(0,240,255,0.4)]">
-              {item.emoji}
-            </span>
-            <span className="text-xs md:text-sm font-semibold text-white leading-tight">
-              {item.label}
-            </span>
-          </motion.div>
-        ))}
-      </div>
-
-      {/* Scrolling marquee — duplicate for motion on wide screens */}
-      <div className="mt-4 overflow-hidden rounded-xl border border-white/5 bg-white/[0.02] py-3 hidden md:block">
-        <div className="flex animate-marquee whitespace-nowrap gap-10">
-          {[...MARKETING_HIGHLIGHTS, ...MARKETING_HIGHLIGHTS].map((item, i) => (
-            <span key={`${item.label}-${i}`} className="inline-flex items-center gap-2 text-sm text-slate-400">
-              <span>{item.emoji}</span>
-              <span className="font-medium text-slate-300">{item.label}</span>
-              <span className="text-cyan-500/40">·</span>
-            </span>
-          ))}
-        </div>
-      </div>
-    </motion.div>
+    <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-white/[0.04] text-slate-600">
+      <Minus className="h-3.5 w-3.5" />
+    </span>
   );
 }
 
-function MetricBlock({
-  value,
-  label,
-  featured = false,
-}: {
-  value: string;
-  label: string;
-  featured?: boolean;
-}) {
-  return (
-    <div
-      className={`relative mb-5 overflow-hidden rounded-xl border text-center ${
-        featured
-          ? "border-cyan-500/30 bg-gradient-to-b from-cyan-500/15 to-cyan-500/5 py-5 px-4"
-          : "border-white/10 bg-white/[0.03] py-4 px-3"
-      }`}
-    >
-      {featured && (
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(0,240,255,0.12)_0%,_transparent_70%)] pointer-events-none" />
-      )}
-      <p
-        className={`relative font-bold font-mono leading-none tracking-tight ${
-          featured ? "text-3xl md:text-4xl text-gradient" : "text-xl text-white"
-        }`}
-      >
-        {value}
-      </p>
-      <p
-        className={`relative mt-1.5 uppercase tracking-[0.15em] font-medium ${
-          featured ? "text-[10px] text-cyan-300/90" : "text-[9px] text-slate-500"
-        }`}
-      >
-        {label}
-      </p>
-    </div>
-  );
-}
-
-function ModuleCard({
-  mod,
-  index,
-  variant = "featured",
-}: {
-  mod: LandingModule;
-  index: number;
-  variant?: "featured" | "compact";
-}) {
+function ModuleCard({ mod, index }: { mod: LandingModule; index: number }) {
   const Icon = mod.icon;
-  const isFeatured = variant === "featured";
-  const metric = mod.statHighlight ?? mod.metric;
-
   return (
     <motion.div
       custom={index}
@@ -183,334 +70,420 @@ function ModuleCard({
       whileInView="visible"
       viewport={{ once: true, margin: "-40px" }}
       variants={fadeUp}
-      whileHover={{ y: -5, transition: { duration: 0.25 } }}
       className="h-full"
     >
       <Link
         href="/login"
-        className={`group relative flex h-full flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#0d1220]/80 backdrop-blur-xl transition-all duration-300 ${mod.border} hover:shadow-[0_8px_40px_-12px_rgba(0,240,255,0.25)] ${
-          isFeatured ? "p-6" : "p-5"
-        }`}
+        className="group relative flex h-full flex-col overflow-hidden rounded-xl border border-white/10 bg-white/[0.02] p-5 transition-all duration-300 hover:-translate-y-1 hover:border-cyan-500/30 hover:bg-white/[0.04]"
       >
-        {/* Top accent bar */}
-        <div className={`absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r ${mod.accent} opacity-60 group-hover:opacity-100 transition-opacity`} />
-
-        {/* Background glow */}
-        <div className={`absolute -top-16 -right-16 w-32 h-32 rounded-full bg-gradient-to-br ${mod.gradient} blur-3xl opacity-40 group-hover:opacity-70 transition-opacity pointer-events-none`} />
-
-        {/* Header */}
-        <div className="relative flex items-start justify-between gap-3 mb-5">
-          <div
-            className={`flex-shrink-0 rounded-xl bg-gradient-to-br ${mod.gradient} border border-white/10 flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform ${
-              isFeatured ? "w-11 h-11" : "w-10 h-10"
-            }`}
-          >
-            <Icon className={`text-cyan-300 ${isFeatured ? "w-5 h-5" : "w-4 h-4"}`} />
+        <div className={`absolute inset-x-0 top-0 h-px bg-gradient-to-r ${mod.accent} opacity-50`} />
+        <div className="mb-3 flex items-start justify-between gap-2">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04]">
+            <Icon className="h-4 w-4 text-cyan-300" />
           </div>
           {mod.badge && (
-            <span className="text-[9px] font-mono font-semibold px-2.5 py-1 rounded-full bg-purple-500/20 text-purple-200 border border-purple-400/30 uppercase tracking-wider">
+            <span className="rounded-md border border-cyan-500/20 bg-cyan-500/10 px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wider text-cyan-300">
               {mod.badge}
             </span>
           )}
         </div>
-
-        <h3 className={`relative font-bold text-white mb-1 ${isFeatured ? "text-xl" : "text-base"}`}>
-          {mod.label}
-        </h3>
-
-        {/* Metric — equal height slot for featured row */}
-        {isFeatured && metric && (
-          <MetricBlock
-            value={metric.value}
-            label={metric.label}
-            featured={Boolean(mod.statHighlight)}
-          />
-        )}
-
-        <p className={`relative text-slate-400 leading-relaxed flex-1 ${isFeatured ? "text-sm" : "text-xs"}`}>
-          {mod.description}
-        </p>
-
-        {/* Tags */}
-        <div className="relative mt-5 flex flex-wrap gap-1.5">
+        <h3 className="mb-1.5 text-base font-semibold text-white">{mod.label}</h3>
+        <p className="mb-4 flex-1 text-sm leading-relaxed text-slate-400">{mod.description}</p>
+        <div className="flex flex-wrap gap-1.5">
           {mod.highlights.map((h) => (
             <span
               key={h}
-              className="text-[10px] px-2 py-1 rounded-lg bg-white/[0.04] text-slate-400 border border-white/[0.06]"
+              className="rounded-md border border-white/[0.06] bg-white/[0.03] px-2 py-0.5 text-[10px] text-slate-400"
             >
               {h}
             </span>
           ))}
         </div>
-
-        {/* CTA */}
-        <div className="relative mt-5 pt-4 border-t border-white/[0.06] flex items-center justify-between">
-          <span className="text-[11px] text-slate-500 group-hover:text-slate-400 transition-colors">
-            Demo available
-          </span>
-          <span className="inline-flex items-center gap-1 text-xs font-semibold text-cyan-400 group-hover:text-cyan-300 transition-colors">
-            Explore
-            <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-          </span>
-        </div>
+        <span className="mt-4 inline-flex items-center gap-1 text-xs font-semibold text-cyan-400 group-hover:gap-2 transition-all">
+          Open module <ArrowRight className="h-3.5 w-3.5" />
+        </span>
       </Link>
     </motion.div>
   );
 }
 
-function SectionLabel({ number, title, accent }: { number: string; title: string; accent?: boolean }) {
+function FaqItem({ q, a }: { q: string; a: string }) {
+  const [open, setOpen] = useState(false);
   return (
-    <div className="flex items-center gap-4 mb-6">
-      <span
-        className={`text-[10px] font-mono font-bold px-2 py-1 rounded-md border ${
-          accent
-            ? "text-cyan-400 border-cyan-500/30 bg-cyan-500/10"
-            : "text-slate-500 border-white/10 bg-white/[0.03]"
-        }`}
+    <div className="border-b border-white/[0.06]">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between gap-4 py-4 text-left"
       >
-        {number}
-      </span>
-      <span
-        className={`text-xs font-semibold uppercase tracking-[0.2em] ${
-          accent ? "text-cyan-400/90" : "text-slate-500"
-        }`}
-      >
-        {title}
-      </span>
-      <div
-        className={`flex-1 h-px ${
-          accent
-            ? "bg-gradient-to-r from-cyan-500/40 to-transparent"
-            : "bg-gradient-to-r from-white/10 to-transparent"
-        }`}
-      />
+        <span className="text-sm font-medium text-white md:text-base">{q}</span>
+        <ChevronDown
+          className={`h-4 w-4 shrink-0 text-slate-500 transition-transform ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+      {open && <p className="pb-4 text-sm leading-relaxed text-slate-400">{a}</p>}
     </div>
   );
 }
 
-function PlatformModulesSection() {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 30 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6, delay: 0.45 }}
-      className="mb-20"
-    >
-      <div className="text-center mb-12">
-        <h2 className="text-3xl md:text-4xl font-bold mb-3">
-          <span className="text-gradient">Complete Security Platform</span>
-        </h2>
-        <p className="text-slate-400 text-sm md:text-base max-w-lg mx-auto">
-          Seven production-ready modules. One dashboard. Demo every feature instantly.
-        </p>
-      </div>
-
-      <div className="relative rounded-3xl border border-white/10 bg-gradient-to-b from-white/[0.04] to-transparent p-6 md:p-10 overflow-hidden">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1/2 h-px bg-gradient-to-r from-transparent via-cyan-500/50 to-transparent" />
-
-        {/* Row 1 */}
-        <SectionLabel number="01" title="Core Capabilities" accent />
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-6 mb-10 md:mb-12">
-          {LANDING_FEATURED_MODULES.map((mod, i) => (
-            <ModuleCard key={mod.id} mod={mod} index={i} variant="featured" />
-          ))}
-        </div>
-
-        {/* Row 2 */}
-        <SectionLabel number="02" title="Platform Modules" />
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-5">
-          {LANDING_SECONDARY_MODULES.map((mod, i) => (
-            <ModuleCard key={mod.id} mod={mod} index={i + 3} variant="compact" />
-          ))}
-        </div>
-      </div>
-    </motion.div>
-  );
-}
-
 export function HeroSection() {
+  const flagship = PRODUCT_SUITE.filter((p) =>
+    ["autonomous-pentest", "deep-scanner", "identity-control", "ai-defense"].includes(p.id)
+  );
+
   return (
     <>
       <ParticleField />
-
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 -left-32 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl animate-float" />
-        <div className="absolute top-1/3 -right-32 w-80 h-80 bg-purple-600/10 rounded-full blur-3xl animate-float-delayed" />
-        <div className="absolute bottom-1/4 left-1/3 w-64 h-64 bg-cyan-400/5 rounded-full blur-3xl animate-pulse-glow" />
-        <div className="absolute inset-0 animate-grid-drift opacity-30 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wMiI+PHBhdGggIGQ9Ik0zNiAzNGg0djJoLTR6bTAtNHY0aC04di00em0tMTYgMGg0djJoLTR6bTAtNHY0aC04di00eiIvPjwvZz48L2c+PC9zdmc+')]" />
-        <div className="absolute left-0 right-0 h-px bg-gradient-to-r from-transparent via-cyan-500/30 to-transparent animate-scan-line" />
+      <div className="pointer-events-none fixed inset-0 overflow-hidden">
+        <div className="absolute -left-32 top-1/4 h-96 w-96 animate-float rounded-full bg-cyan-500/10 blur-3xl" />
+        <div className="absolute -right-32 top-1/3 h-80 w-80 animate-float-delayed rounded-full bg-sky-600/10 blur-3xl" />
+        <div className="absolute inset-0 animate-grid-drift opacity-25 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:60px_60px]" />
       </div>
 
-      <nav className="relative z-10 flex items-center justify-between px-8 py-6 max-w-7xl mx-auto">
-        <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.5 }}
-          className="flex items-center gap-3 relative"
-        >
-          <div className="relative">
-            <PulseRing />
-            <motion.div
-              animate={{ boxShadow: ["0 0 20px rgba(0,240,255,0.2)", "0 0 40px rgba(0,240,255,0.4)", "0 0 20px rgba(0,240,255,0.2)"] }}
-              transition={{ repeat: Infinity, duration: 2 }}
-              className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-purple-600 flex items-center justify-center relative z-10"
-            >
-              <Shield className="w-5 h-5" />
-            </motion.div>
-          </div>
-          <span className="font-bold text-xl">QuantumShield</span>
-        </motion.div>
-        <motion.div
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.5 }}
-          className="flex items-center gap-4"
-        >
-          <Link href="/pricing" className="text-slate-400 hover:text-white transition-colors text-sm">
-            Pricing
-          </Link>
-          <Link href="/login" className="text-slate-400 hover:text-white transition-colors text-sm">
-            Sign In
-          </Link>
-          <Button variant="glow" asChild>
-            <Link href="/signup">Start for $5/mo</Link>
-          </Button>
-        </motion.div>
-      </nav>
+      <SiteNav />
 
-      <section className="relative z-10 max-w-7xl mx-auto px-8 pt-16 pb-24">
-        {/* Hero headline */}
-        <div className="text-center mb-14">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5 }}
-            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-cyan-500/30 bg-cyan-500/10 text-cyan-300 text-sm mb-8"
+      {/* Hero — brand + one story + live console */}
+      <section className="relative z-10 mx-auto grid max-w-7xl gap-10 px-5 pb-16 pt-10 md:grid-cols-2 md:items-center md:gap-12 md:px-8 md:pb-24 md:pt-16">
+        <div>
+          <motion.p
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-4 inline-flex items-center gap-2 rounded-full border border-cyan-500/20 bg-cyan-500/10 px-3 py-1 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-cyan-300"
           >
-            <Sparkles className="w-4 h-4" />
-            7 Integrated Modules · One Enterprise Platform
-          </motion.div>
+            <span className="h-1.5 w-1.5 rounded-full bg-cyan-400" />
+            World&apos;s cybersecurity OS
+          </motion.p>
 
           <motion.h1
-            initial={{ opacity: 0, y: 40 }}
+            initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.1 }}
-            className="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight mb-6"
+            transition={{ delay: 0.05 }}
+            className="mb-4 text-4xl font-bold tracking-tight text-white md:text-5xl lg:text-[3.4rem] lg:leading-[1.08]"
           >
-            <ShimmerText className="text-gradient">Stop Hackers</ShimmerText>
-            <br />
-            <motion.span
-              initial={{ opacity: 0, x: -30 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.6, delay: 0.4 }}
-              className="text-white inline-block"
-            >
-              Before They Strike
-            </motion.span>
+            <span className="block text-white">QuantumShield</span>
+            <ShimmerText className="text-gradient">outruns every point tool</ShimmerText>
           </motion.h1>
 
           <motion.p
-            initial={{ opacity: 0, y: 30 }}
+            initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.25 }}
-            className="text-lg md:text-xl text-slate-400 max-w-3xl mx-auto mb-10 leading-relaxed"
+            transition={{ delay: 0.12 }}
+            className="mb-7 max-w-xl text-base leading-relaxed text-slate-400 md:text-lg"
           >
-            Deep Scanner, API Security, Agent Security, Cloud Guard, Phishing Shield,
-            Dark Web Intel, and Compliance Hub — all in one platform.
+            Autonomous AI pentest, deep attack-surface scanning, identity control, AI-attack defense,
+            cloud, phishing, dark web, and compliance — one console that beats Scanifier, Veiliux,
+            Opal, Adaptive, and single-purpose vendors.
           </motion.p>
 
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.4 }}
-            className="flex flex-col sm:flex-row gap-4 justify-center"
+            transition={{ delay: 0.18 }}
+            className="flex flex-col gap-3 sm:flex-row"
           >
             <Button variant="glow" size="lg" asChild className="group">
-              <Link href="/signup">
-                Start Free Trial
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              <Link href="/signup?tier=FREE">
+                Start free — scan 1 domain
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
               </Link>
             </Button>
             <Button variant="secondary" size="lg" asChild>
-              <Link href="/login">
-                <Sparkles className="w-4 h-4" />
-                Try Demo Account
+              <Link href="/api/auth/demo-login?portal=client">
+                <Sparkles className="h-4 w-4" />
+                Open live demo
               </Link>
             </Button>
           </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3 }}
+            className="mt-8 flex flex-wrap gap-x-6 gap-y-2 font-mono text-[11px] uppercase tracking-[0.12em] text-slate-500"
+          >
+            <span className="text-slate-400">Deep Scanner</span>
+            <span>·</span>
+            <span className="text-slate-400">QuantumStrike AI</span>
+            <span>·</span>
+            <span className="text-slate-400">Identity</span>
+            <span>·</span>
+            <span className="text-slate-400">Compliance</span>
+          </motion.div>
         </div>
 
-        <PlatformModulesSection />
+        <LiveConsole />
+      </section>
 
-        <MarketingHighlights />
-
-        {/* Deep-dive capability cards */}
-        <div className="text-center mb-10">
-          <h2 className="text-2xl md:text-3xl font-bold mb-3">
-            <span className="text-gradient">Built for Serious Security Teams</span>
-          </h2>
-          <p className="text-slate-400 text-sm md:text-base">
-            Enterprise-grade scanning engine powering every module
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 text-left">
-          {HERO_FEATURES.map((feature, i) => {
-            const Icon = feature.icon;
-            return (
-              <motion.div
-                key={feature.title}
-                custom={i}
-                initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true, margin: "-50px" }}
-                variants={fadeUp}
-                whileHover={{ y: -6, scale: 1.02, transition: { duration: 0.2 } }}
-                className={`glass p-6 bg-gradient-to-br ${feature.color} border border-white/10 ${feature.border} transition-all duration-300 group`}
-              >
-                <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                  <Icon className="w-6 h-6 text-cyan-400" />
-                </div>
-                <h3 className="font-semibold text-lg mb-2 text-white">{feature.title}</h3>
-                <p className="text-slate-400 text-sm leading-relaxed">{feature.desc}</p>
-              </motion.div>
-            );
-          })}
+      {/* Market pressure */}
+      <section className="relative z-10 border-y border-white/[0.06] bg-white/[0.015]">
+        <div className="mx-auto grid max-w-7xl grid-cols-2 gap-6 px-5 py-10 md:grid-cols-4 md:px-8">
+          {LANDING_STATS.map((s, i) => (
+            <motion.div
+              key={s.label}
+              custom={i}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+              variants={fadeUp}
+            >
+              <p className="font-mono text-2xl font-bold text-white md:text-3xl">{s.value}</p>
+              <p className="mt-1 text-sm text-slate-300">{s.label}</p>
+              <p className="mt-1 font-mono text-[10px] uppercase tracking-wider text-slate-600">
+                {s.source}
+              </p>
+            </motion.div>
+          ))}
         </div>
       </section>
 
-      {/* CTA section */}
-      <section className="relative z-10 border-t border-white/10 py-24">
-        <div className="max-w-7xl mx-auto px-8">
+      {/* Flagship products — Scanifier-class + Opal/Adaptive beaters */}
+      <section id="products" className="relative z-10 mx-auto max-w-7xl px-5 py-20 md:px-8 md:py-28">
+        <div className="mb-10 max-w-2xl">
+          <p className="eyebrow mb-3 text-cyan-400/80">Products</p>
+          <h2 className="mb-3 text-3xl font-bold text-white md:text-4xl">
+            Four products. One operating system.
+          </h2>
+          <p className="text-slate-400">
+            QuantumStrike AI matches autonomous pentest leaders. Deep Scanner owns continuous surface
+            coverage. Identity and AI Defense replace Opal- and Adaptive-class point tools.
+          </p>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          {flagship.map((p, i) => (
+            <motion.div
+              key={p.id}
+              custom={i}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+              variants={fadeUp}
+              className="group relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.04] to-transparent p-6 md:p-7"
+            >
+              <div className="mb-4 flex flex-wrap items-center gap-2">
+                {p.badge && (
+                  <span className="rounded-md border border-cyan-500/25 bg-cyan-500/10 px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wider text-cyan-300">
+                    {p.badge}
+                  </span>
+                )}
+                <span className="font-mono text-[10px] uppercase tracking-wider text-slate-500">
+                  beats {p.beats.join(" · ")}
+                </span>
+              </div>
+              <h3 className="mb-1 text-xl font-bold text-white">{p.name}</h3>
+              <p className="mb-3 text-sm font-medium text-cyan-300/90">{p.tagline}</p>
+              <p className="mb-5 text-sm leading-relaxed text-slate-400">{p.description}</p>
+              <ul className="mb-5 space-y-2">
+                {p.features.slice(0, 4).map((f) => (
+                  <li key={f} className="flex items-start gap-2 text-sm text-slate-300">
+                    <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-cyan-400" />
+                    {f}
+                  </li>
+                ))}
+              </ul>
+              <Link
+                href={p.href.startsWith("/dashboard") ? "/login" : p.href}
+                className="inline-flex items-center gap-1.5 text-sm font-semibold text-cyan-400 transition-colors hover:text-cyan-300"
+              >
+                Explore {p.name}
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+            </motion.div>
+          ))}
+        </div>
+
+        <div className="mt-8 text-center">
+          <Button variant="outline" asChild>
+            <Link href="/products">
+              View full product suite <ArrowRight className="h-4 w-4" />
+            </Link>
+          </Button>
+        </div>
+      </section>
+
+      {/* How it works */}
+      <section className="relative z-10 border-y border-white/[0.06] bg-white/[0.015]">
+        <div className="mx-auto max-w-7xl px-5 py-20 md:px-8 md:py-24">
+          <div className="mb-12 text-center">
+            <p className="eyebrow mb-3 text-cyan-400/80">How it works</p>
+            <h2 className="text-3xl font-bold text-white md:text-4xl">From scope to proof in hours</h2>
+          </div>
+          <div className="grid gap-6 md:grid-cols-4">
+            {LANDING_HOW_IT_WORKS.map((step, i) => (
+              <motion.div
+                key={step.step}
+                custom={i}
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true }}
+                variants={fadeUp}
+                className="relative"
+              >
+                <p className="mb-3 font-mono text-sm font-bold text-cyan-400">STEP / {step.step}</p>
+                <h3 className="mb-2 text-lg font-semibold text-white">{step.title}</h3>
+                <p className="text-sm leading-relaxed text-slate-400">{step.description}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Platform modules */}
+      <section id="platform" className="relative z-10 mx-auto max-w-7xl px-5 py-20 md:px-8 md:py-28">
+        <div className="mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <div className="max-w-xl">
+            <p className="eyebrow mb-3 text-cyan-400/80">Platform modules</p>
+            <h2 className="mb-3 text-3xl font-bold text-white md:text-4xl">
+              Every module security teams actually run
+            </h2>
+            <p className="text-slate-400">
+              Start on Deep Scanner. Unlock API, agents, cloud, phishing, dark web, compliance, and
+              reports without stitching five vendors together.
+            </p>
+          </div>
+          <div className="flex gap-3">
+            <div className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
+              <Zap className="mb-1 h-4 w-4 text-cyan-400" />
+              <p className="text-xs text-slate-400">Real probes</p>
+            </div>
+            <div className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
+              <Shield className="mb-1 h-4 w-4 text-cyan-400" />
+              <p className="text-xs text-slate-400">Org-scoped</p>
+            </div>
+            <div className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
+              <Lock className="mb-1 h-4 w-4 text-cyan-400" />
+              <p className="text-xs text-slate-400">Tier-gated</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="mb-4 grid gap-4 md:grid-cols-3">
+          {LANDING_FEATURED_MODULES.map((mod, i) => (
+            <ModuleCard key={mod.id} mod={mod} index={i} />
+          ))}
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {LANDING_SECONDARY_MODULES.map((mod, i) => (
+            <ModuleCard key={mod.id} mod={mod} index={i + 3} />
+          ))}
+        </div>
+      </section>
+
+      {/* Comparison */}
+      <section id="compare" className="relative z-10 border-y border-white/[0.06] bg-white/[0.015]">
+        <div className="mx-auto max-w-7xl px-5 py-20 md:px-8 md:py-24">
+          <div className="mb-10 max-w-2xl">
+            <p className="eyebrow mb-3 text-cyan-400/80">Why QuantumShield ranks first</p>
+            <h2 className="mb-3 text-3xl font-bold text-white md:text-4xl">
+              Built to beat the category — not join it
+            </h2>
+            <p className="text-slate-400">
+              Point tools force you to buy Scanifier-class offense, Opal-class identity, Adaptive-class
+              AI defense, Vanta-class compliance, and Veiliux-class services separately. We ship the
+              stack.
+            </p>
+          </div>
+
+          <div className="overflow-x-auto rounded-2xl border border-white/10">
+            <table className="w-full min-w-[720px] border-collapse text-left text-sm">
+              <thead>
+                <tr className="border-b border-white/10 bg-white/[0.03]">
+                  <th className="px-4 py-3 font-medium text-slate-400">Capability</th>
+                  <th className="px-3 py-3 text-center font-semibold text-cyan-300">QuantumShield</th>
+                  <th className="px-3 py-3 text-center font-medium text-slate-500">Scanifier</th>
+                  <th className="px-3 py-3 text-center font-medium text-slate-500">Veiliux</th>
+                  <th className="px-3 py-3 text-center font-medium text-slate-500">Opal</th>
+                  <th className="px-3 py-3 text-center font-medium text-slate-500">Adaptive</th>
+                  <th className="px-3 py-3 text-center font-medium text-slate-500">Vanta</th>
+                </tr>
+              </thead>
+              <tbody>
+                {LANDING_COMPARISON.map((row) => (
+                  <tr key={row.capability} className="border-b border-white/[0.05] hover:bg-white/[0.02]">
+                    <td className="px-4 py-3.5 text-slate-300">{row.capability}</td>
+                    <td className="px-3 py-3.5 text-center">
+                      <div className="flex justify-center">
+                        <CmpCell value={row.quantum} />
+                      </div>
+                    </td>
+                    <td className="px-3 py-3.5 text-center">
+                      <div className="flex justify-center">
+                        <CmpCell value={row.scanifier} />
+                      </div>
+                    </td>
+                    <td className="px-3 py-3.5 text-center">
+                      <div className="flex justify-center">
+                        <CmpCell value={row.veiliux} />
+                      </div>
+                    </td>
+                    <td className="px-3 py-3.5 text-center">
+                      <div className="flex justify-center">
+                        <CmpCell value={row.opal} />
+                      </div>
+                    </td>
+                    <td className="px-3 py-3.5 text-center">
+                      <div className="flex justify-center">
+                        <CmpCell value={row.adaptive} />
+                      </div>
+                    </td>
+                    <td className="px-3 py-3.5 text-center">
+                      <div className="flex justify-center">
+                        <CmpCell value={row.vanta} />
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section id="faq" className="relative z-10 mx-auto max-w-3xl px-5 py-20 md:px-8 md:py-24">
+        <div className="mb-8 text-center">
+          <p className="eyebrow mb-3 text-cyan-400/80">FAQ</p>
+          <h2 className="text-3xl font-bold text-white">Answers before you ask</h2>
+        </div>
+        <div>
+          {LANDING_FAQ.map((item) => (
+            <FaqItem key={item.q} q={item.q} a={item.a} />
+          ))}
+        </div>
+      </section>
+
+      {/* CTA */}
+      <section className="relative z-10 border-t border-white/10 py-20">
+        <div className="mx-auto max-w-7xl px-5 md:px-8">
           <motion.div
-            initial={{ opacity: 0, y: 30 }}
+            initial={{ opacity: 0, y: 24 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-            className="text-center glass p-10 md:p-14 bg-gradient-to-br from-cyan-500/10 via-transparent to-purple-600/10"
+            className="rounded-2xl border border-cyan-500/20 bg-gradient-to-br from-cyan-500/10 via-transparent to-sky-600/10 px-6 py-12 text-center md:px-14"
           >
-            <Lock className="w-10 h-10 text-cyan-400 mx-auto mb-4" />
-            <h3 className="text-2xl md:text-3xl font-bold mb-3">Ready to secure your attack surface?</h3>
-            <p className="text-slate-400 mb-8 max-w-lg mx-auto">
-              Log in with <span className="text-cyan-400 font-mono">demo@quantumshield.io</span> — all modules unlocked.
+            <h3 className="mb-3 text-2xl font-bold text-white md:text-3xl">
+              Make QuantumShield your security OS today
+            </h3>
+            <p className="mx-auto mb-8 max-w-lg text-slate-400">
+              Free plan: 1 domain, 1 scan/month. Or open the live demo (
+              <span className="font-mono text-cyan-400">demo@quantumshield.io</span>) and see the full
+              console.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <div className="flex flex-col justify-center gap-3 sm:flex-row">
               <Button variant="glow" size="lg" asChild>
-                <Link href="/signup">
-                  Get Started — $5/mo <ArrowRight className="w-4 h-4" />
+                <Link href="/signup?tier=FREE">
+                  Start free <ArrowRight className="h-4 w-4" />
                 </Link>
               </Button>
-              <Button
-                variant="outline"
-                size="lg"
-                onClick={() => window.location.assign("/api/auth/demo-login")}
-              >
-                Sign In with Demo
+              <Button variant="outline" size="lg" asChild>
+                <Link href="/products">Browse products</Link>
               </Button>
             </div>
           </motion.div>
         </div>
       </section>
+
+      <SiteFooter />
     </>
   );
 }

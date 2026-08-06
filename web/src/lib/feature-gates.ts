@@ -4,7 +4,7 @@ import { tierMeetsRequirement } from "./tiers";
 
 export const FEATURE_GATES = {
   scanner: {
-    lightning: "STARTER" as TierId,
+    lightning: "FREE" as TierId,
     standard: "PROFESSIONAL" as TierId,
     mega: "BUSINESS" as TierId,
     super: "ENTERPRISE" as TierId,

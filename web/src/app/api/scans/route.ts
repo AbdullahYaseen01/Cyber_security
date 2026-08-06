@@ -8,26 +8,54 @@ import { canUseScanMode } from "@/lib/tiers";
 import { startScanSimulation } from "@/lib/scan-engine";
 import { isDemoUserEmail } from "@/lib/demo-auth";
 
-export async function GET() {
+function normalizeDomain(input: string): string {
+  return input
+    .trim()
+    .replace(/^https?:\/\//i, "")
+    .replace(/\/.*$/, "")
+    .replace(/:\d+$/, "")
+    .toLowerCase();
+}
+
+export async function GET(req: NextRequest) {
   try {
-    const { org } = await requireApiSubscription();
+    const { session, org } = await requireApiSubscription();
+    const mine = req.nextUrl.searchParams.get("mine") === "1";
+
     const scans = await prisma.scan.findMany({
-      where: { orgId: org.orgId },
-      include: { domain: { select: { name: true } } },
+      where: {
+        orgId: org.orgId,
+        ...(mine ? { userId: session.user.id } : {}),
+      },
+      include: {
+        domain: { select: { name: true } },
+        user: { select: { id: true, email: true, name: true } },
+      },
       orderBy: { createdAt: "desc" },
-      take: 50,
+      take: 100,
     });
-    return NextResponse.json({ scans });
+
+    return NextResponse.json({ scans, mine });
   } catch (err) {
     return handleApiError(err);
   }
 }
 
-const startScanSchema = z.object({
-  domainId: z.string(),
-  mode: z.enum(["LIGHTNING", "STANDARD", "MEGA", "SUPER"]).default("LIGHTNING"),
-  config: z.record(z.unknown()).optional(),
-});
+const startScanSchema = z
+  .object({
+    domainId: z.string().optional(),
+    domain: z.string().min(3).optional(),
+    email: z
+      .union([z.string().email(), z.literal("")])
+      .optional()
+      .transform((v) => (v && v.trim() ? v.trim() : undefined)),
+    mode: z.enum(["LIGHTNING", "STANDARD", "MEGA", "SUPER"]).default("LIGHTNING"),
+    config: z.record(z.unknown()).optional(),
+  })
+  .refine((d) => Boolean(d.domainId || d.domain), {
+    message: "Domain is required",
+    path: ["domain"],
+  });
 
 export async function POST(req: NextRequest) {
   try {
@@ -48,18 +76,40 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Monthly scan limit reached" }, { status: 403 });
     }
 
-    const domain = await prisma.domain.findFirst({
-      where: {
-        id: data.domainId,
-        orgId: org.orgId,
-        ...(isDemo ? {} : { verified: true }),
-      },
-    });
+    let domain =
+      data.domainId
+        ? await prisma.domain.findFirst({
+            where: { id: data.domainId, orgId: org.orgId },
+          })
+        : null;
+
+    if (!domain && data.domain) {
+      const name = normalizeDomain(data.domain);
+      domain = await prisma.domain.upsert({
+        where: { orgId_name: { orgId: org.orgId, name } },
+        create: {
+          orgId: org.orgId,
+          name,
+          verified: true,
+        },
+        update: { verified: true },
+      });
+    }
+
     if (!domain) {
-      return NextResponse.json({ error: "Domain not found or not verified" }, { status: 403 });
+      return NextResponse.json({ error: "Domain not found" }, { status: 403 });
+    }
+
+    if (!domain.verified) {
+      domain = await prisma.domain.update({
+        where: { id: domain.id },
+        data: { verified: true },
+      });
     }
 
     const fuzzTotal = data.mode === "MEGA" || data.mode === "SUPER" ? 1_000_000 : 100_000;
+    // Email is optional — only attach when the user explicitly provided one.
+    const reportEmail = data.email;
 
     const scan = await prisma.scan.create({
       data: {
@@ -68,15 +118,25 @@ export async function POST(req: NextRequest) {
         userId: session.user.id,
         mode: data.mode,
         status: "PENDING",
-        config: (data.config ?? {}) as Prisma.InputJsonValue,
+        config: {
+          ...(data.config ?? {}),
+          ...(reportEmail ? { reportEmail } : {}),
+        } as Prisma.InputJsonValue,
         fuzzTotal,
       },
       include: { domain: { select: { name: true } } },
     });
 
-    startScanSimulation(scan.id).catch(console.error);
+    void startScanSimulation(scan.id).catch(console.error);
 
-    return NextResponse.json({ scanId: scan.id, scan });
+    return NextResponse.json({
+      scanId: scan.id,
+      scan,
+      reportEmail: reportEmail ?? null,
+      message: reportEmail
+        ? "Scan started. A report will be emailed when it finishes."
+        : "Scan started. View progress and findings in your history.",
+    });
   } catch (err) {
     return handleApiError(err);
   }

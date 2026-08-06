@@ -1,11 +1,13 @@
 import Stripe from "stripe";
-import { TIERS, type TierId, type BillingCycle } from "./tiers";
+import { TIERS, type TierId, type BillingCycle, PAID_TIERS } from "./tiers";
 
 export const stripe = process.env.STRIPE_SECRET_KEY
   ? new Stripe(process.env.STRIPE_SECRET_KEY)
   : null;
 
-export const STRIPE_PRICE_IDS: Record<TierId, Record<BillingCycle, string>> = {
+type PaidTierId = Exclude<TierId, "FREE">;
+
+export const STRIPE_PRICE_IDS: Record<PaidTierId, Record<BillingCycle, string>> = {
   STARTER: {
     monthly: process.env.STRIPE_STARTER_MONTHLY ?? "price_starter_monthly",
     quarterly: process.env.STRIPE_STARTER_QUARTERLY ?? "price_starter_quarterly",
@@ -29,7 +31,10 @@ export const STRIPE_PRICE_IDS: Record<TierId, Record<BillingCycle, string>> = {
 };
 
 export function getStripePriceId(tier: TierId, cycle: BillingCycle): string {
-  return STRIPE_PRICE_IDS[tier][cycle];
+  if (tier === "FREE" || !PAID_TIERS.includes(tier)) {
+    throw new Error("FREE tier does not use Stripe checkout");
+  }
+  return STRIPE_PRICE_IDS[tier as PaidTierId][cycle];
 }
 
 export function tierFromStripePrice(priceId: string): TierId | null {
@@ -43,11 +48,12 @@ export function tierFromStripePrice(priceId: string): TierId | null {
 
 export function formatPrice(tier: TierId, cycle: BillingCycle): string {
   const config = TIERS[tier];
+  if (config.isFree || config.monthlyPrice === 0) return "$0";
   const price =
     cycle === "annual"
       ? config.annualPrice / 12
       : cycle === "quarterly"
         ? config.quarterlyPrice / 3
         : config.monthlyPrice;
-  return price % 1 === 0 ? `$${price}` : `$${price.toFixed(2)}`;
+  return `$${Math.round(price)}`;
 }

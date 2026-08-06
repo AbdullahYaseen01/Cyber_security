@@ -12,17 +12,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const sidebarCollapsed = useUIStore((s) => s.sidebarCollapsed);
 
   return (
-    <div className="min-h-screen bg-[#0B0F19] text-white text-[15px]">
-      <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-cyan-950/15 via-[#0B0F19] to-[#0B0F19] pointer-events-none" />
+    <div className="min-h-screen text-[14px] text-foreground">
       <Sidebar />
       <div
-        className="transition-[margin-left] duration-300 ease-out min-h-screen flex flex-col"
+        className="transition-[margin-left] duration-150 ease-out min-h-screen flex flex-col"
         style={{
           marginLeft: sidebarCollapsed ? SIDEBAR_WIDTH_COLLAPSED : SIDEBAR_WIDTH_EXPANDED,
         }}
       >
         <Header />
-        <main className="flex-1 p-6 pb-12">{children}</main>
+        {/* pb-10 clears the fixed status bar so content / buttons are never clipped */}
+        <main className="flex-1 px-6 py-5 pb-10">{children}</main>
         <StatusBar />
       </div>
     </div>
@@ -31,17 +31,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const setUser = useAuthStore((s) => s.setUser);
+  const user = useAuthStore((s) => s.user);
   const pathname = usePathname();
 
   useEffect(() => {
+    if (user) return;
     let cancelled = false;
-    fetchSessionUser().then((user) => {
-      if (!cancelled) setUser(mapSessionToStoreUser(user));
+    fetchSessionUser().then((payload) => {
+      if (!cancelled) setUser(mapSessionToStoreUser(payload));
     });
     return () => {
       cancelled = true;
     };
-  }, [pathname, setUser]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname === "/login", setUser]);
 
   return <>{children}</>;
 }

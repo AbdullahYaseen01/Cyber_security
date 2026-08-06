@@ -5,9 +5,19 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { TIERS, PRICING_MODULES, getPricingFeatures, getTierMonthlyEquivalent, getBillingBilledLabel, type BillingCycle } from "@/lib/tiers";
+import {
+  TIERS,
+  PRICING_MODULES,
+  getPricingFeatures,
+  getTierMonthlyEquivalent,
+  getBillingBilledLabel,
+  type BillingCycle,
+  type TierId,
+} from "@/lib/tiers";
 import { cn } from "@/lib/utils";
 import { BillingCycleToggle } from "@/components/pricing/billing-cycle-toggle";
+import { SiteNav } from "@/components/landing/site-nav";
+import { SiteFooter } from "@/components/landing/site-footer";
 
 function FeatureItem({ label, included }: { label: string; included: boolean }) {
   return (
@@ -24,6 +34,12 @@ function FeatureItem({ label, included }: { label: string; included: boolean }) 
   );
 }
 
+function ctaLabel(tierId: TierId) {
+  if (tierId === "FREE") return "Start free";
+  if (tierId === "ENTERPRISE") return "Contact Sales";
+  return "Start trial";
+}
+
 export default function PricingPage() {
   const [cycle, setCycle] = useState<BillingCycle>("annual");
   const tiers = Object.values(TIERS);
@@ -32,29 +48,28 @@ export default function PricingPage() {
     <div className="min-h-screen bg-navy-950 text-white">
       <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-cyan-950/20 via-navy-950 to-navy-950" />
 
-      <nav className="relative z-10 flex items-center justify-between px-8 py-6 max-w-7xl mx-auto">
-        <Link href="/" className="font-bold text-xl">QuantumShield</Link>
-        <div className="flex gap-4">
-          <Link href="/login" className="text-slate-400 hover:text-white text-sm">Sign In</Link>
-          <Button variant="glow" size="sm" asChild>
-            <Link href="/signup">Get Started</Link>
-          </Button>
-        </div>
-      </nav>
+      <SiteNav />
 
       <div className="relative z-10 max-w-7xl mx-auto px-8 py-16">
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold mb-4">Simple, Transparent Pricing</h1>
-          <p className="text-slate-400 mb-8">No free tier. Every plan is paid. Start at just $5/month.</p>
+          <p className="text-slate-400 mb-2 max-w-2xl mx-auto">
+            Free forever for 1 domain and 1 scan/month. Paid plans unlock QuantumStrike AI, identity,
+            AI defense, cloud, phishing, and compliance.
+          </p>
+          <p className="text-slate-500 text-sm mb-8">
+            Start with Deep Scanner on your real infrastructure — upgrade only when you outgrow Free.
+          </p>
 
           <BillingCycleToggle value={cycle} onChange={setCycle} />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-16">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-5 mb-16">
           {tiers.map((tier, i) => {
             const price = getTierMonthlyEquivalent(tier, cycle);
             const billedLabel = getBillingBilledLabel(tier, cycle);
             const isPopular = tier.id === "BUSINESS";
+            const isFree = tier.id === "FREE";
             const { limits, modules, scanModes } = getPricingFeatures(tier);
 
             return (
@@ -62,21 +77,25 @@ export default function PricingPage() {
                 key={tier.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.1 }}
+                transition={{ delay: i * 0.08 }}
                 className={cn(
-                  "relative rounded-2xl border p-6 flex flex-col",
+                  "relative rounded-2xl border p-5 flex flex-col",
                   isPopular
                     ? "border-cyan-500/50 bg-cyan-500/5 glow-cyan"
-                    : "border-white/10 bg-white/5"
+                    : isFree
+                      ? "border-emerald-500/40 bg-emerald-500/5"
+                      : "border-white/10 bg-white/5"
                 )}
               >
                 {tier.badge && (
                   <span
                     className={cn(
                       "absolute -top-3 left-1/2 -translate-x-1/2 text-xs px-3 py-1 rounded-full font-medium whitespace-nowrap",
-                      isPopular
-                        ? "bg-cyan-500 text-navy-950"
-                        : "bg-purple-500/20 text-purple-300 border border-purple-500/30"
+                      isFree
+                        ? "bg-emerald-500 text-navy-950"
+                        : isPopular
+                          ? "bg-cyan-500 text-navy-950"
+                          : "bg-purple-500/20 text-purple-300 border border-purple-500/30"
                     )}
                   >
                     {tier.badge}
@@ -88,9 +107,7 @@ export default function PricingPage() {
                     ${price % 1 === 0 ? price : price.toFixed(2)}
                   </span>
                   <span className="text-slate-400 text-sm">/mo</span>
-                  {billedLabel && (
-                    <p className="text-xs text-slate-500 mt-1">{billedLabel}</p>
-                  )}
+                  {billedLabel && <p className="text-xs text-slate-500 mt-1">{billedLabel}</p>}
                 </div>
 
                 <div className="flex-1 mb-6 space-y-4">
@@ -128,10 +145,8 @@ export default function PricingPage() {
                   </div>
                 </div>
 
-                <Button variant={isPopular ? "glow" : "secondary"} className="w-full" asChild>
-                  <Link href={`/signup?tier=${tier.id}&cycle=${cycle}`}>
-                    {tier.id === "ENTERPRISE" ? "Contact Sales" : "Start 7-Day Trial"}
-                  </Link>
+                <Button variant={isFree || isPopular ? "glow" : "secondary"} className="w-full" asChild>
+                  <Link href={`/signup?tier=${tier.id}&cycle=${cycle}`}>{ctaLabel(tier.id)}</Link>
                 </Button>
               </motion.div>
             );
@@ -139,7 +154,7 @@ export default function PricingPage() {
         </div>
 
         <div className="glass overflow-x-auto">
-          <table className="w-full text-sm min-w-[720px]">
+          <table className="w-full text-sm min-w-[820px]">
             <thead>
               <tr className="border-b border-white/10">
                 <th className="text-left p-4 text-slate-400 font-medium">Feature</th>
@@ -152,18 +167,40 @@ export default function PricingPage() {
             </thead>
             <tbody>
               {[
-                { label: "Domains", get: (t: (typeof tiers)[0]) => (t.domains === "unlimited" ? "∞" : t.domains) },
-                { label: "Scans/month", get: (t: (typeof tiers)[0]) => (t.scansPerMonth === "unlimited" ? "∞" : t.scansPerMonth) },
-                { label: "Team Seats", get: (t: (typeof tiers)[0]) => (t.teamSeats === "unlimited" ? "∞" : t.teamSeats) },
+                {
+                  label: "Domains",
+                  get: (t: (typeof tiers)[0]) => (t.domains === "unlimited" ? "∞" : t.domains),
+                },
+                {
+                  label: "Scans/month",
+                  get: (t: (typeof tiers)[0]) =>
+                    t.scansPerMonth === "unlimited" ? "∞" : t.scansPerMonth,
+                },
+                {
+                  label: "Team Seats",
+                  get: (t: (typeof tiers)[0]) => (t.teamSeats === "unlimited" ? "∞" : t.teamSeats),
+                },
                 { label: "API Access", get: (t: (typeof tiers)[0]) => t.apiAccess },
                 ...PRICING_MODULES.map((m) => ({
                   label: m.label,
                   get: (t: (typeof tiers)[0]) => t.modules.includes(m.id),
                 })),
-                { label: "Lightning Scan", get: (t: (typeof tiers)[0]) => t.scanModes.includes("lightning") },
-                { label: "Standard Scan", get: (t: (typeof tiers)[0]) => t.scanModes.includes("standard") },
-                { label: "Mega Scan", get: (t: (typeof tiers)[0]) => t.scanModes.includes("mega") },
-                { label: "Super Scan", get: (t: (typeof tiers)[0]) => t.scanModes.includes("super") },
+                {
+                  label: "Lightning Scan",
+                  get: (t: (typeof tiers)[0]) => t.scanModes.includes("lightning"),
+                },
+                {
+                  label: "Standard Scan",
+                  get: (t: (typeof tiers)[0]) => t.scanModes.includes("standard"),
+                },
+                {
+                  label: "Mega Scan",
+                  get: (t: (typeof tiers)[0]) => t.scanModes.includes("mega"),
+                },
+                {
+                  label: "Super Scan",
+                  get: (t: (typeof tiers)[0]) => t.scanModes.includes("super"),
+                },
               ].map((row) => (
                 <tr key={row.label} className="border-b border-white/5">
                   <td className="p-4 text-slate-400">{row.label}</td>
@@ -189,6 +226,8 @@ export default function PricingPage() {
           </table>
         </div>
       </div>
+
+      <SiteFooter />
     </div>
   );
 }

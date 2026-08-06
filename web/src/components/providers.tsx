@@ -11,13 +11,21 @@ export function Providers({ children }: { children: React.ReactNode }) {
     () =>
       new QueryClient({
         defaultOptions: {
-          queries: { staleTime: 30_000, retry: 1 },
+          queries: {
+            // Cached data is served instantly when switching between sections;
+            // a background refetch keeps it current.
+            staleTime: 60_000,
+            gcTime: 10 * 60_000,
+            retry: 1,
+            refetchOnWindowFocus: false,
+            refetchOnMount: false,
+          },
         },
       })
   );
 
   return (
-    <SessionProvider>
+    <SessionProvider refetchInterval={0} refetchOnWindowFocus={false}>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           {children}
@@ -26,9 +34,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
             position="top-right"
             toastOptions={{
               style: {
-                background: "rgba(15, 21, 37, 0.95)",
-                border: "1px solid rgba(255,255,255,0.1)",
-                color: "#f1f5f9",
+                background: "rgba(18, 26, 42, 0.92)",
+                border: "1px solid rgba(148,163,184,0.2)",
+                color: "#E8EEF9",
+                borderRadius: "12px",
+                backdropFilter: "blur(16px)",
               },
             }}
           />

@@ -9,6 +9,7 @@ interface UserState {
   orgId: string;
   orgName: string;
   role: string;
+  platformRole: string;
   tier: TierId;
   subscriptionStatus: string;
   scansUsed: number;

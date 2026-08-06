@@ -70,7 +70,7 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0B0F19] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -82,7 +82,7 @@ export default function SignupPage() {
               <Shield className="w-7 h-7 text-white" />
             </div>
             <CardTitle className="text-2xl">Create Account</CardTitle>
-            <CardDescription>Start securing your infrastructure from $5/mo</CardDescription>
+            <CardDescription>Start free — 1 domain, 1 scan/month. Upgrade from $99/mo.</CardDescription>
           </CardHeader>
 
           <CardContent>

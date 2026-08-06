@@ -8,12 +8,12 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-cyan-500 text-navy-950 hover:bg-cyan-400 shadow-lg shadow-cyan-500/20",
-        secondary: "bg-white/5 text-white border border-white/10 hover:bg-white/10 hover:border-cyan-500/30",
+        default: "bg-cyan-500 text-slate-950 hover:bg-cyan-400 shadow-lg shadow-cyan-500/20",
+        secondary: "bg-white/5 text-white border border-white/10 hover:bg-white/10 hover:border-cyan-400/30",
         ghost: "hover:bg-white/5 text-slate-300 hover:text-white",
-        destructive: "bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30",
-        outline: "border border-cyan-500/40 text-cyan-400 hover:bg-cyan-500/10",
-        glow: "bg-gradient-to-r from-cyan-500 to-purple-600 text-white hover:opacity-90 shadow-lg shadow-cyan-500/25",
+        destructive: "bg-rose-500/15 text-rose-300 border border-rose-400/30 hover:bg-rose-500/25",
+        outline: "border border-cyan-400/40 text-cyan-300 hover:bg-cyan-400/10",
+        glow: "bg-gradient-to-r from-cyan-500 to-violet-500 text-white hover:opacity-95 shadow-lg shadow-cyan-500/25",
       },
       size: {
         default: "h-10 px-4 py-2",

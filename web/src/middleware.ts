@@ -5,7 +5,12 @@ export default NextAuth(authConfig).auth;
 
 export const config = {
   matcher: [
+    "/dashboard",
     "/dashboard/:path*",
+    "/admin",
+    "/admin/:path*",
+    "/tester",
+    "/tester/:path*",
     "/onboarding/:path*",
     "/login",
     "/signup",

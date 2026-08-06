@@ -14,14 +14,19 @@ export async function GET(req: NextRequest) {
         orgId: org.orgId,
         isFalsePositive: false,
         ...(scanId ? { scanId } : {}),
-        ...(severity ? { severity: severity as "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "INFO" } : {}),
+        ...(severity
+          ? { severity: severity as "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "INFO" }
+          : {}),
       },
-      include: { domain: { select: { name: true } } },
+      include: {
+        domain: { select: { name: true } },
+        scan: { select: { id: true, mode: true, status: true } },
+      },
       orderBy: { createdAt: "desc" },
-      take: 100,
+      take: 200,
     });
 
-    return NextResponse.json({ findings });
+    return NextResponse.json({ findings, count: findings.length });
   } catch (err) {
     return handleApiError(err);
   }

@@ -117,9 +117,14 @@ export default function ActiveScanPage() {
           </Button>
         )}
         {isComplete && (
-          <Button variant="glow" size="sm" asChild>
-            <Link href={`/dashboard/scanner/findings?scanId=${id}`}>View Findings</Link>
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="secondary" size="sm" asChild>
+              <Link href="/dashboard/scanner/history">History</Link>
+            </Button>
+            <Button variant="glow" size="sm" asChild>
+              <Link href={`/dashboard/scanner/findings?scanId=${id}`}>View findings</Link>
+            </Button>
+          </div>
         )}
       </div>
 
@@ -162,20 +167,56 @@ export default function ActiveScanPage() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="grid grid-cols-2 md:grid-cols-5 gap-3"
+          className="space-y-4"
         >
-          {[
-            { label: "Total", value: scan?.findingsCount ?? 0, color: "text-white" },
-            { label: "Critical", value: scan?.criticalCount ?? 0, color: "text-red-400" },
-            { label: "High", value: scan?.highCount ?? 0, color: "text-orange-400" },
-            { label: "Medium", value: scan?.mediumCount ?? 0, color: "text-amber-400" },
-            { label: "Low", value: scan?.lowCount ?? 0, color: "text-cyan-400" },
-          ].map((s) => (
-            <div key={s.label} className="p-4 rounded-xl bg-white/5 border border-white/10 text-center">
-              <p className="text-xs text-slate-400">{s.label}</p>
-              <p className={`text-2xl font-bold font-mono ${s.color}`}>{s.value}</p>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+            {[
+              { label: "Total", value: scan?.findingsCount ?? 0, color: "text-white" },
+              { label: "Critical", value: scan?.criticalCount ?? 0, color: "text-red-400" },
+              { label: "High", value: scan?.highCount ?? 0, color: "text-orange-400" },
+              { label: "Medium", value: scan?.mediumCount ?? 0, color: "text-amber-400" },
+              { label: "Low", value: scan?.lowCount ?? 0, color: "text-cyan-400" },
+            ].map((s) => (
+              <div key={s.label} className="p-4 rounded-xl bg-white/5 border border-white/10 text-center backdrop-blur-md">
+                <p className="text-xs text-slate-400">{s.label}</p>
+                <p className={`text-2xl font-bold font-mono ${s.color}`}>{s.value}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="rounded-2xl border border-white/10 bg-white/[0.04] backdrop-blur-xl p-4">
+            <div className="flex items-center justify-between mb-3">
+              <p className="font-semibold">Findings from this scan</p>
+              <Button size="sm" variant="glow" asChild>
+                <Link href={`/dashboard/scanner/findings?scanId=${id}`}>Open full list</Link>
+              </Button>
             </div>
-          ))}
+            {findings.length === 0 ? (
+              <p className="text-sm text-slate-400 py-4 text-center">
+                No findings recorded for this scan yet.
+              </p>
+            ) : (
+              <div className="space-y-2 max-h-[360px] overflow-y-auto">
+                {findings.slice(0, 25).map((f) => (
+                  <div key={f.id} className="p-3 rounded-xl border border-white/10 bg-white/[0.03]">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Badge
+                        severity={
+                          (["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO"].includes(f.severity)
+                            ? f.severity
+                            : "INFO") as "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "INFO"
+                        }
+                      >
+                        {f.severity}
+                      </Badge>
+                      <span className="text-sm font-medium truncate">{f.title}</span>
+                    </div>
+                    <p className="text-xs font-mono text-cyan-300/80 truncate">{f.url}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </motion.div>
       )}
     </motion.div>

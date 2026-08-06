@@ -74,43 +74,56 @@ export default function DashboardPage() {
   const user = useAuthStore((s) => s.user);
   const isDemo = user?.isDemo;
 
+  const fetchJson = async (url: string) => {
+    const r = await fetch(url);
+    if (!r.ok) throw new Error(`Failed ${url}`);
+    return r.json();
+  };
+
   const { data: scoreData, isLoading: scoreLoading } = useQuery({
     queryKey: ["dashboard-score"],
-    queryFn: () => fetch("/api/dashboard/score").then((r) => r.json()),
+    queryFn: () => fetchJson("/api/dashboard/score"),
+    retry: 1,
   });
 
   const { data: threatsData } = useQuery({
     queryKey: ["dashboard-threats"],
-    queryFn: () => fetch("/api/dashboard/threats").then((r) => r.json()),
+    queryFn: () => fetchJson("/api/dashboard/threats"),
+    retry: 1,
   });
 
   const { data: modulesData } = useQuery({
     queryKey: ["dashboard-modules"],
-    queryFn: () => fetch("/api/dashboard/modules").then((r) => r.json()),
+    queryFn: () => fetchJson("/api/dashboard/modules"),
+    retry: 1,
   });
 
   const { data: findingsData } = useQuery({
     queryKey: ["dashboard-findings"],
-    queryFn: () => fetch("/api/dashboard/recent-findings").then((r) => r.json()),
+    queryFn: () => fetchJson("/api/dashboard/recent-findings"),
+    retry: 1,
   });
 
   const { data: agentsData } = useQuery({
     queryKey: ["dashboard-agents"],
-    queryFn: () => fetch("/api/dashboard/agents").then((r) => r.json()),
+    queryFn: () => fetchJson("/api/dashboard/agents"),
+    retry: 1,
   });
 
   const { data: complianceData } = useQuery({
     queryKey: ["dashboard-compliance"],
-    queryFn: () => fetch("/api/dashboard/compliance").then((r) => r.json()),
+    queryFn: () => fetchJson("/api/dashboard/compliance"),
+    retry: 1,
   });
 
   const { data: apiRiskData } = useQuery({
     queryKey: ["dashboard-api-risk"],
-    queryFn: () => fetch("/api/dashboard/api-risk").then((r) => r.json()),
+    queryFn: () => fetchJson("/api/dashboard/api-risk"),
+    retry: 1,
   });
 
-  const score = scoreData?.score ?? 0;
-  const grade = scoreData?.grade ?? "F";
+  const score = typeof scoreData?.score === "number" ? scoreData.score : null;
+  const grade = scoreData?.grade ?? (score == null ? "—" : "C");
   const threats = threatsData?.threats ?? [];
   const modules = modulesData?.modules ?? [];
   const findings = findingsData?.findings ?? [];
@@ -138,7 +151,7 @@ export default function DashboardPage() {
         variants={stagger}
         initial="hidden"
         animate="show"
-        className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-cyan-500/10 via-[#0F1525] to-purple-600/10 p-6 md:p-8"
+        className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-cyan-500/10 via-[var(--surface)] to-purple-600/10 p-6 md:p-8"
       >
         <div className="absolute top-0 right-0 w-64 h-64 bg-cyan-500/5 rounded-full blur-3xl pointer-events-none" />
         <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-6">
@@ -189,7 +202,7 @@ export default function DashboardPage() {
       {/* Stat cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { icon: Shield, label: "Security Score", value: scoreLoading ? "—" : String(score), sub: `Grade ${grade}`, color: "text-cyan-400" },
+          { icon: Shield, label: "Security Score", value: scoreLoading || score == null ? "—" : String(score), sub: `Grade ${grade}`, color: "text-cyan-400" },
           { icon: AlertTriangle, label: "Active Threats", value: String(totalThreats), sub: `${criticalCount} critical`, color: "text-red-400" },
           { icon: TrendingUp, label: "Scans This Month", value: user ? `${user.scansUsed}` : "0", sub: isDemo ? "Unlimited" : `of ${user?.scansLimit ?? 10}`, color: "text-purple-400" },
           { icon: Activity, label: "Agents Online", value: String(agentsData?.online ?? 0), sub: `of ${agentsData?.total ?? 0} total`, color: "text-green-400" },
@@ -243,7 +256,7 @@ export default function DashboardPage() {
         <Card>
           <CardHeader><CardTitle>Security Score</CardTitle></CardHeader>
           <CardContent className="flex justify-center pb-6">
-            {scoreLoading ? <WidgetSkeleton /> : <SecurityGauge score={score} grade={grade} />}
+            {scoreLoading || score == null ? <WidgetSkeleton /> : <SecurityGauge score={score} grade={grade} />}
           </CardContent>
         </Card>
 
@@ -326,7 +339,7 @@ export default function DashboardPage() {
                         <Cell key={entry.name} fill={entry.color} />
                       ))}
                     </Pie>
-                    <Tooltip contentStyle={{ background: "#0F1525", border: "1px solid rgba(255,255,255,0.1)" }} />
+                    <Tooltip contentStyle={{ background: "var(--surface)", border: "1px solid rgba(255,255,255,0.1)" }} />
                   </PieChart>
                 </ResponsiveContainer>
                 <p className="text-center text-sm text-slate-400">{agentsData?.online ?? 0} Agents Online</p>
@@ -352,7 +365,7 @@ export default function DashboardPage() {
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
                   <XAxis dataKey="bucket" stroke="#64748b" fontSize={10} />
                   <YAxis stroke="#64748b" fontSize={10} />
-                  <Tooltip contentStyle={{ background: "#0F1525", border: "1px solid rgba(255,255,255,0.1)" }} />
+                  <Tooltip contentStyle={{ background: "var(--surface)", border: "1px solid rgba(255,255,255,0.1)" }} />
                   <Bar dataKey="count" fill="#00F0FF" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>

@@ -14,12 +14,13 @@ import { TIERS, type TierId, type BillingCycle, getTierBillingTotal } from "@/li
 function SignupForm() {
   const router = useRouter();
   const params = useSearchParams();
-  const tier = (params.get("tier") as TierId) ?? "STARTER";
+  const tier = (params.get("tier") as TierId) ?? "FREE";
   const cycle = (params.get("cycle") as BillingCycle) ?? "annual";
-  const tierConfig = TIERS[tier] ?? TIERS.STARTER;
+  const tierConfig = TIERS[tier] ?? TIERS.FREE;
   const billingTotal = getTierBillingTotal(tierConfig, cycle);
   const billingPeriod =
     cycle === "annual" ? "/year" : cycle === "quarterly" ? "/quarter" : "/month";
+  const isFree = Boolean(tierConfig.isFree);
 
   const [form, setForm] = useState({ email: "", password: "", name: "", orgName: "" });
   const [loading, setLoading] = useState(false);
@@ -52,8 +53,9 @@ function SignupForm() {
         </div>
         <CardTitle>Create Account</CardTitle>
         <CardDescription>
-          {tierConfig.name} plan · ${billingTotal}
-          {billingPeriod} · 7-day trial
+          {isFree
+            ? "Free plan · 1 domain · 1 scan/month · no credit card"
+            : `${tierConfig.name} plan · $${billingTotal}${billingPeriod}`}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -75,7 +77,7 @@ function SignupForm() {
             <Input id="org" value={form.orgName} onChange={(e) => setForm({ ...form, orgName: e.target.value })} required className="mt-1" />
           </div>
           <Button type="submit" variant="glow" className="w-full" disabled={loading}>
-            {loading ? "Creating..." : "Start 7-Day Trial"}
+            {loading ? "Creating..." : isFree ? "Create free account" : `Continue with ${tierConfig.name}`}
           </Button>
         </form>
         <p className="text-center text-sm text-slate-400 mt-4">

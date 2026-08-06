@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
           orgId: organization.id,
           stripeCustomerId: `pending_${organization.id}`,
           status: "INCOMPLETE",
-          tier: "STARTER",
+          tier: "FREE",
         },
       });
 
